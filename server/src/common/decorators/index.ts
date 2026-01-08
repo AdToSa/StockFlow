@@ -9,3 +9,7 @@ export {
 
 // Public route decorator (bypasses authentication)
 export { Public, IS_PUBLIC_KEY } from './public.decorator';
+
+// Parameter decorators for accessing current user data
+export { CurrentUser } from './current-user.decorator';
+export { CurrentTenant } from './current-tenant.decorator';
