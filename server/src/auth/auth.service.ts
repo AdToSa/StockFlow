@@ -11,6 +11,7 @@ import { JwtService, JwtSignOptions } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../prisma/prisma.service';
 import { RegisterDto } from './dto';
+import { JwtPayload } from './types';
 import {
   User,
   UserRole,
@@ -19,16 +20,8 @@ import {
   Tenant,
 } from '@prisma/client';
 
-/**
- * JWT payload structure for access tokens
- */
-export interface JwtPayload {
-  sub: string;
-  email: string;
-  role: UserRole;
-  tenantId: string;
-  type: 'access' | 'refresh';
-}
+// Re-export JwtPayload for backwards compatibility
+export type { JwtPayload } from './types';
 
 /**
  * User data returned after successful authentication

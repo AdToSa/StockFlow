@@ -4,6 +4,7 @@ import { JwtModule, JwtModuleOptions } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
+import { JwtStrategy, JwtRefreshStrategy } from './strategies';
 import { PrismaModule } from '../prisma/prisma.module';
 
 /**
@@ -11,6 +12,7 @@ import { PrismaModule } from '../prisma/prisma.module';
  * - User registration and login
  * - JWT token generation and validation
  * - Passport integration for authentication strategies
+ * - JWT and JWT-Refresh strategies for token validation
  *
  * This module exports AuthService and JwtModule for use in other modules
  * that need to perform authentication operations or validate tokens.
@@ -38,7 +40,7 @@ import { PrismaModule } from '../prisma/prisma.module';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService],
+  providers: [AuthService, JwtStrategy, JwtRefreshStrategy],
   exports: [AuthService, JwtModule],
 })
 export class AuthModule {}
