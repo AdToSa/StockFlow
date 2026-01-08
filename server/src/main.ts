@@ -1,6 +1,6 @@
 import 'dotenv/config';
 import { NestFactory } from '@nestjs/core';
-import { Logger } from '@nestjs/common';
+import { Logger, ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
 import {
   AllExceptionsFilter,
@@ -22,6 +22,22 @@ async function bootstrap() {
     new PrismaExceptionFilter(),
     new PrismaValidationExceptionFilter(),
     new HttpExceptionFilter(),
+  );
+
+  // Global validation pipe
+  // - whitelist: strips properties not in DTO
+  // - forbidNonWhitelisted: throws error if unknown properties are sent
+  // - transform: auto-transforms payloads to DTO instances
+  // - enableImplicitConversion: converts query params to their declared types
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
+      transformOptions: {
+        enableImplicitConversion: true,
+      },
+    }),
   );
 
   const port = process.env.PORT ?? 3000;
