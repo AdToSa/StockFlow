@@ -4,13 +4,20 @@ import {
   UnauthorizedException,
   ConflictException,
   NotFoundException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService, JwtSignOptions } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../prisma/prisma.service';
 import { RegisterDto } from './dto';
-import { User, UserRole, UserStatus } from '@prisma/client';
+import {
+  User,
+  UserRole,
+  UserStatus,
+  TenantStatus,
+  Tenant,
+} from '@prisma/client';
 
 /**
  * JWT payload structure for access tokens
@@ -32,6 +39,7 @@ export interface AuthUser {
   firstName: string;
   lastName: string;
   role: UserRole;
+  status: UserStatus;
   tenantId: string;
 }
 
@@ -45,8 +53,15 @@ export interface AuthResponse {
 }
 
 /**
+ * Response structure for logout
+ */
+export interface LogoutResponse {
+  message: string;
+}
+
+/**
  * AuthService handles all authentication-related operations including
- * user validation, token generation, registration, and login.
+ * user validation, token generation, registration, login, refresh, and logout.
  */
 @Injectable()
 export class AuthService {
@@ -60,17 +75,66 @@ export class AuthService {
   ) {}
 
   /**
-   * Validates a user by email and password
+   * Validates tenant status and throws appropriate error if inactive
+   *
+   * @param tenant - The tenant to validate
+   * @throws ForbiddenException if tenant is SUSPENDED or INACTIVE
+   */
+  private validateTenantStatus(tenant: Tenant): void {
+    if (tenant.status === TenantStatus.SUSPENDED) {
+      this.logger.warn(`Access denied - tenant suspended: ${tenant.id}`);
+      throw new ForbiddenException(
+        'Your organization has been suspended. Please contact support.',
+      );
+    }
+
+    if (tenant.status === TenantStatus.INACTIVE) {
+      this.logger.warn(`Access denied - tenant inactive: ${tenant.id}`);
+      throw new ForbiddenException(
+        'Your organization account is inactive. Please contact support.',
+      );
+    }
+  }
+
+  /**
+   * Validates user status and throws appropriate error if not allowed
+   *
+   * @param user - The user to validate
+   * @throws ForbiddenException if user is SUSPENDED or INACTIVE
+   */
+  private validateUserStatus(user: User): void {
+    if (user.status === UserStatus.SUSPENDED) {
+      this.logger.warn(`Access denied - user suspended: ${user.email}`);
+      throw new ForbiddenException(
+        'Your account has been suspended. Please contact your administrator.',
+      );
+    }
+
+    if (user.status === UserStatus.INACTIVE) {
+      this.logger.warn(`Access denied - user inactive: ${user.email}`);
+      throw new ForbiddenException(
+        'Your account is inactive. Please contact your administrator.',
+      );
+    }
+    // PENDING status is allowed for login - user can access limited features
+  }
+
+  /**
+   * Validates a user by email and password (basic credential check only)
    *
    * @param email - User's email address
    * @param password - Plain text password to verify
-   * @returns The user if validation succeeds, null otherwise
+   * @returns The user with tenant if validation succeeds, null otherwise
    */
-  async validateUser(email: string, password: string): Promise<User | null> {
+  async validateUser(
+    email: string,
+    password: string,
+  ): Promise<(User & { tenant: Tenant }) | null> {
     this.logger.debug(`Validating user: ${email}`);
 
     const user = await this.prisma.user.findFirst({
       where: { email: email.toLowerCase() },
+      include: { tenant: true },
     });
 
     if (!user) {
@@ -85,18 +149,7 @@ export class AuthService {
       return null;
     }
 
-    // Check if user account is active
-    if (
-      user.status !== UserStatus.ACTIVE &&
-      user.status !== UserStatus.PENDING
-    ) {
-      this.logger.debug(
-        `User account is not active: ${email}, status: ${user.status}`,
-      );
-      return null;
-    }
-
-    this.logger.debug(`User validated successfully: ${email}`);
+    this.logger.debug(`User credentials validated: ${email}`);
     return user;
   }
 
@@ -107,6 +160,7 @@ export class AuthService {
    * @param password - Plain text password
    * @returns Authentication response with user data and tokens
    * @throws UnauthorizedException if credentials are invalid
+   * @throws ForbiddenException if tenant or user is suspended/inactive
    */
   async login(email: string, password: string): Promise<AuthResponse> {
     const user = await this.validateUser(email, password);
@@ -115,6 +169,12 @@ export class AuthService {
       throw new UnauthorizedException('Invalid email or password');
     }
 
+    // Validate tenant status first
+    this.validateTenantStatus(user.tenant);
+
+    // Validate user status (PENDING is allowed)
+    this.validateUserStatus(user);
+
     const tokens = await this.generateTokens(
       user.id,
       user.email,
@@ -122,7 +182,7 @@ export class AuthService {
       user.tenantId,
     );
 
-    // Update refresh token in database
+    // Update refresh token and lastLoginAt in database
     await this.prisma.user.update({
       where: { id: user.id },
       data: {
@@ -147,6 +207,7 @@ export class AuthService {
    * @returns Authentication response with user data and tokens
    * @throws ConflictException if email already exists for the tenant
    * @throws NotFoundException if tenant doesn't exist
+   * @throws ForbiddenException if tenant is suspended/inactive
    */
   async register(dto: RegisterDto): Promise<AuthResponse> {
     const { email, password, firstName, lastName, tenantId } = dto;
@@ -164,7 +225,10 @@ export class AuthService {
       throw new NotFoundException('Tenant not found');
     }
 
-    // Check if user already exists for this tenant
+    // Validate tenant status
+    this.validateTenantStatus(tenant);
+
+    // Check if user already exists for this tenant (compound key)
     const existingUser = await this.prisma.user.findUnique({
       where: {
         tenantId_email: {
@@ -181,10 +245,10 @@ export class AuthService {
       throw new ConflictException('A user with this email already exists');
     }
 
-    // Hash password
+    // Hash password with bcrypt (salt rounds 12)
     const hashedPassword = await bcrypt.hash(password, this.saltRounds);
 
-    // Create user with PENDING status
+    // Create user with PENDING status and EMPLOYEE role
     const user = await this.prisma.user.create({
       data: {
         email: normalizedEmail,
@@ -197,7 +261,7 @@ export class AuthService {
       },
     });
 
-    // Generate tokens
+    // Generate tokens so user can access limited features while pending
     const tokens = await this.generateTokens(
       user.id,
       user.email,
@@ -218,6 +282,122 @@ export class AuthService {
       accessToken: tokens.accessToken,
       refreshToken: tokens.refreshToken,
     };
+  }
+
+  /**
+   * Refreshes access token using a valid refresh token
+   *
+   * @param refreshToken - The refresh token to validate
+   * @returns New authentication response with fresh tokens
+   * @throws UnauthorizedException if refresh token is invalid or expired
+   * @throws ForbiddenException if tenant or user is suspended/inactive
+   */
+  async refreshTokens(refreshToken: string): Promise<AuthResponse> {
+    this.logger.debug('Processing token refresh request');
+
+    try {
+      // Verify the refresh token
+      const jwtRefreshSecret =
+        this.configService.get<string>('jwt.refreshSecret');
+
+      const payload = await this.jwtService.verifyAsync<JwtPayload>(
+        refreshToken,
+        { secret: jwtRefreshSecret },
+      );
+
+      // Ensure it's a refresh token, not an access token
+      if (payload.type !== 'refresh') {
+        this.logger.warn('Invalid token type for refresh');
+        throw new UnauthorizedException('Invalid refresh token');
+      }
+
+      // Find the user and verify the stored refresh token matches
+      const user = await this.prisma.user.findUnique({
+        where: { id: payload.sub },
+        include: { tenant: true },
+      });
+
+      if (!user) {
+        this.logger.warn(`Refresh failed - user not found: ${payload.sub}`);
+        throw new UnauthorizedException('Invalid refresh token');
+      }
+
+      // Verify the refresh token matches what's stored in the database
+      if (user.refreshToken !== refreshToken) {
+        this.logger.warn(
+          `Refresh failed - token mismatch for user: ${user.email}`,
+        );
+        throw new UnauthorizedException('Invalid refresh token');
+      }
+
+      // Validate tenant status
+      this.validateTenantStatus(user.tenant);
+
+      // Validate user status
+      this.validateUserStatus(user);
+
+      // Generate new tokens (token rotation for security)
+      const tokens = await this.generateTokens(
+        user.id,
+        user.email,
+        user.role,
+        user.tenantId,
+      );
+
+      // Update the stored refresh token
+      await this.prisma.user.update({
+        where: { id: user.id },
+        data: { refreshToken: tokens.refreshToken },
+      });
+
+      this.logger.log(`Tokens refreshed successfully for user: ${user.email}`);
+
+      return {
+        user: this.mapToAuthUser(user),
+        accessToken: tokens.accessToken,
+        refreshToken: tokens.refreshToken,
+      };
+    } catch (error) {
+      if (
+        error instanceof UnauthorizedException ||
+        error instanceof ForbiddenException
+      ) {
+        throw error;
+      }
+
+      this.logger.warn('Token refresh failed - invalid or expired token');
+      throw new UnauthorizedException('Invalid or expired refresh token');
+    }
+  }
+
+  /**
+   * Logs out a user by invalidating their refresh token
+   *
+   * @param userId - The ID of the user to log out
+   * @returns Logout confirmation message
+   * @throws NotFoundException if user is not found
+   */
+  async logout(userId: string): Promise<LogoutResponse> {
+    this.logger.debug(`Processing logout for user: ${userId}`);
+
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      this.logger.warn(`Logout failed - user not found: ${userId}`);
+      throw new NotFoundException('User not found');
+    }
+
+    // Invalidate the refresh token
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { refreshToken: null },
+    });
+
+    this.logger.log(`User logged out successfully: ${user.email}`);
+
+    return { message: 'Logged out successfully' };
   }
 
   /**
@@ -291,6 +471,7 @@ export class AuthService {
       firstName: user.firstName,
       lastName: user.lastName,
       role: user.role,
+      status: user.status,
       tenantId: user.tenantId,
     };
   }
