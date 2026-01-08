@@ -1,0 +1,121 @@
+PROPRIETARY SOFTWARE LICENSE AGREEMENT
+
+Copyright (c) 2025 Daniel Esteban Londoño. All rights reserved.
+
+NOTICE: This software and accompanying documentation (collectively, the "Software")
+are proprietary to Daniel Esteban Londoño ("Licensor"). The Software is protected by
+copyright laws and international treaties.
+
+1. GRANT OF LICENSE
+
+   This License Agreement does NOT grant you any rights to use, copy, modify, merge,
+   publish, distribute, sublicense, and/or sell copies of the Software without explicit
+   written permission from the Licensor.
+
+2. RESTRICTIONS
+
+   You may NOT:
+
+   a) Copy, reproduce, or duplicate the Software or any portion thereof;
+
+   b) Modify, adapt, translate, reverse engineer, decompile, disassemble, or create
+      derivative works based on the Software;
+
+   c) Distribute, transfer, sublicense, lease, lend, rent, or otherwise make available
+      the Software to any third party;
+
+   d) Remove, alter, or obscure any proprietary notices, labels, or marks on the Software;
+
+   e) Use the Software for any commercial purpose without a valid commercial license
+      agreement with the Licensor;
+
+   f) Use the Software in any manner that infringes the intellectual property or other
+      rights of the Licensor or any third party;
+
+   g) Use the Software to develop competing products or services.
+
+3. OWNERSHIP
+
+   The Software is licensed, not sold. The Licensor retains all right, title, and interest
+   in and to the Software, including all intellectual property rights therein. This License
+   Agreement does not convey to you any rights of ownership in or related to the Software.
+
+4. CONFIDENTIALITY
+
+   The Software contains trade secrets and proprietary information belonging to the Licensor.
+   You agree to maintain the confidentiality of the Software and not to disclose any portion
+   of the Software to any third party without the prior written consent of the Licensor.
+
+5. TERMINATION
+
+   This License Agreement is effective until terminated. Your rights under this License
+   Agreement will terminate automatically without notice if you fail to comply with any
+   term of this License Agreement. Upon termination, you must destroy all copies of the
+   Software in your possession or control.
+
+6. DISCLAIMER OF WARRANTIES
+
+   THE SOFTWARE IS PROVIDED "AS IS" WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+   INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR
+   PURPOSE, AND NONINFRINGEMENT. THE LICENSOR DOES NOT WARRANT THAT THE SOFTWARE WILL BE
+   UNINTERRUPTED OR ERROR-FREE.
+
+7. LIMITATION OF LIABILITY
+
+   IN NO EVENT SHALL THE LICENSOR BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL,
+   EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+   SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+   HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+   OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THE
+   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+8. INDEMNIFICATION
+
+   You agree to indemnify, defend, and hold harmless the Licensor from and against any
+   and all claims, damages, losses, costs, and expenses (including reasonable attorneys'
+   fees) arising out of or related to your use of the Software or your violation of this
+   License Agreement.
+
+9. GOVERNING LAW
+
+   This License Agreement shall be governed by and construed in accordance with the laws
+   of Colombia, without regard to its conflict of law provisions. Any legal action or
+   proceeding arising under this License Agreement shall be brought exclusively in the
+   courts located in Colombia.
+
+10. ENTIRE AGREEMENT
+
+    This License Agreement constitutes the entire agreement between you and the Licensor
+    regarding the Software and supersedes all prior or contemporaneous understandings,
+    agreements, negotiations, representations, and warranties, both written and oral,
+    regarding the Software.
+
+11. SEVERABILITY
+
+    If any provision of this License Agreement is held to be unenforceable or invalid,
+    such provision will be changed and interpreted to accomplish the objectives of such
+    provision to the greatest extent possible under applicable law, and the remaining
+    provisions will continue in full force and effect.
+
+12. WAIVER
+
+    The failure of the Licensor to exercise or enforce any right or provision of this
+    License Agreement shall not constitute a waiver of such right or provision.
+
+13. CONTACT INFORMATION
+
+    For licensing inquiries, please contact:
+
+    Daniel Esteban Londoño
+    GitHub: https://github.com/DanielEsLoH
+    Repository: https://github.com/DanielEsLoH/StockFlow
+
+---
+
+BY ACCESSING, VIEWING, OR USING THE SOFTWARE, YOU ACKNOWLEDGE THAT YOU HAVE READ THIS
+LICENSE AGREEMENT, UNDERSTAND IT, AND AGREE TO BE BOUND BY ITS TERMS AND CONDITIONS.
+IF YOU DO NOT AGREE TO THE TERMS OF THIS LICENSE AGREEMENT, YOU ARE NOT AUTHORIZED TO
+ACCESS OR USE THE SOFTWARE.
+
+StockFlow - Multi-Tenant Inventory & Invoicing Platform
+Copyright (c) 2025 Daniel Esteban Londoño. All rights reserved.
