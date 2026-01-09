@@ -8,6 +8,7 @@ import { CommonModule } from './common';
 import { UsersModule } from './users';
 import { CategoriesModule } from './categories';
 import { ProductsModule } from './products';
+import { WarehousesModule } from './warehouses';
 import { configuration, validateEnv } from './config';
 import { TenantMiddleware } from './common/middleware';
 
@@ -25,6 +26,7 @@ import { TenantMiddleware } from './common/middleware';
     UsersModule,
     CategoriesModule,
     ProductsModule,
+    WarehousesModule,
   ],
   controllers: [AppController],
   providers: [AppService],
