@@ -6,6 +6,7 @@ import { PrismaModule } from './prisma';
 import { AuthModule } from './auth/auth.module';
 import { CommonModule } from './common';
 import { UsersModule } from './users';
+import { CategoriesModule } from './categories';
 import { configuration, validateEnv } from './config';
 import { TenantMiddleware } from './common/middleware';
 
@@ -21,6 +22,7 @@ import { TenantMiddleware } from './common/middleware';
     CommonModule,
     AuthModule,
     UsersModule,
+    CategoriesModule,
   ],
   controllers: [AppController],
   providers: [AppService],
