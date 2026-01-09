@@ -194,5 +194,205 @@ describe('HttpExceptionFilter', () => {
 
       expect(warnSpy).toHaveBeenCalled();
     });
+
+    describe('extractErrorDetails edge cases', () => {
+      it('should handle response with missing message and error', () => {
+        const exception = new HttpException({}, HttpStatus.BAD_REQUEST);
+
+        filter.catch(exception, mockArgumentsHost);
+
+        expect(mockResponse.json).toHaveBeenCalledWith(
+          expect.objectContaining({
+            message: 'An error occurred',
+            error: 'Bad Request',
+          }),
+        );
+      });
+
+      it('should handle string response directly', () => {
+        const exception = new HttpException(
+          'Simple string error',
+          HttpStatus.BAD_REQUEST,
+        );
+
+        filter.catch(exception, mockArgumentsHost);
+
+        expect(mockResponse.json).toHaveBeenCalledWith(
+          expect.objectContaining({
+            message: 'Simple string error',
+          }),
+        );
+      });
+    });
+
+    describe('getHttpStatusText', () => {
+      it('should return correct text for Unauthorized', () => {
+        const exception = new HttpException({}, HttpStatus.UNAUTHORIZED);
+
+        filter.catch(exception, mockArgumentsHost);
+
+        expect(mockResponse.json).toHaveBeenCalledWith(
+          expect.objectContaining({
+            error: 'Unauthorized',
+          }),
+        );
+      });
+
+      it('should return correct text for Forbidden', () => {
+        const exception = new HttpException({}, HttpStatus.FORBIDDEN);
+
+        filter.catch(exception, mockArgumentsHost);
+
+        expect(mockResponse.json).toHaveBeenCalledWith(
+          expect.objectContaining({
+            error: 'Forbidden',
+          }),
+        );
+      });
+
+      it('should return correct text for Method Not Allowed', () => {
+        const exception = new HttpException({}, HttpStatus.METHOD_NOT_ALLOWED);
+
+        filter.catch(exception, mockArgumentsHost);
+
+        expect(mockResponse.json).toHaveBeenCalledWith(
+          expect.objectContaining({
+            error: 'Method Not Allowed',
+          }),
+        );
+      });
+
+      it('should return correct text for Not Acceptable', () => {
+        const exception = new HttpException({}, HttpStatus.NOT_ACCEPTABLE);
+
+        filter.catch(exception, mockArgumentsHost);
+
+        expect(mockResponse.json).toHaveBeenCalledWith(
+          expect.objectContaining({
+            error: 'Not Acceptable',
+          }),
+        );
+      });
+
+      it('should return correct text for Request Timeout', () => {
+        const exception = new HttpException({}, HttpStatus.REQUEST_TIMEOUT);
+
+        filter.catch(exception, mockArgumentsHost);
+
+        expect(mockResponse.json).toHaveBeenCalledWith(
+          expect.objectContaining({
+            error: 'Request Timeout',
+          }),
+        );
+      });
+
+      it('should return correct text for Conflict', () => {
+        const exception = new HttpException({}, HttpStatus.CONFLICT);
+
+        filter.catch(exception, mockArgumentsHost);
+
+        expect(mockResponse.json).toHaveBeenCalledWith(
+          expect.objectContaining({
+            error: 'Conflict',
+          }),
+        );
+      });
+
+      it('should return correct text for Gone', () => {
+        const exception = new HttpException({}, HttpStatus.GONE);
+
+        filter.catch(exception, mockArgumentsHost);
+
+        expect(mockResponse.json).toHaveBeenCalledWith(
+          expect.objectContaining({
+            error: 'Gone',
+          }),
+        );
+      });
+
+      it('should return correct text for Unprocessable Entity', () => {
+        const exception = new HttpException({}, HttpStatus.UNPROCESSABLE_ENTITY);
+
+        filter.catch(exception, mockArgumentsHost);
+
+        expect(mockResponse.json).toHaveBeenCalledWith(
+          expect.objectContaining({
+            error: 'Unprocessable Entity',
+          }),
+        );
+      });
+
+      it('should return correct text for Too Many Requests', () => {
+        const exception = new HttpException({}, HttpStatus.TOO_MANY_REQUESTS);
+
+        filter.catch(exception, mockArgumentsHost);
+
+        expect(mockResponse.json).toHaveBeenCalledWith(
+          expect.objectContaining({
+            error: 'Too Many Requests',
+          }),
+        );
+      });
+
+      it('should return correct text for Not Implemented', () => {
+        const exception = new HttpException({}, HttpStatus.NOT_IMPLEMENTED);
+
+        filter.catch(exception, mockArgumentsHost);
+
+        expect(mockResponse.json).toHaveBeenCalledWith(
+          expect.objectContaining({
+            error: 'Not Implemented',
+          }),
+        );
+      });
+
+      it('should return correct text for Bad Gateway', () => {
+        const exception = new HttpException({}, HttpStatus.BAD_GATEWAY);
+
+        filter.catch(exception, mockArgumentsHost);
+
+        expect(mockResponse.json).toHaveBeenCalledWith(
+          expect.objectContaining({
+            error: 'Bad Gateway',
+          }),
+        );
+      });
+
+      it('should return correct text for Service Unavailable', () => {
+        const exception = new HttpException({}, HttpStatus.SERVICE_UNAVAILABLE);
+
+        filter.catch(exception, mockArgumentsHost);
+
+        expect(mockResponse.json).toHaveBeenCalledWith(
+          expect.objectContaining({
+            error: 'Service Unavailable',
+          }),
+        );
+      });
+
+      it('should return correct text for Gateway Timeout', () => {
+        const exception = new HttpException({}, HttpStatus.GATEWAY_TIMEOUT);
+
+        filter.catch(exception, mockArgumentsHost);
+
+        expect(mockResponse.json).toHaveBeenCalledWith(
+          expect.objectContaining({
+            error: 'Gateway Timeout',
+          }),
+        );
+      });
+
+      it('should return generic Error for unknown status codes', () => {
+        const exception = new HttpException({}, 418); // I'm a teapot
+
+        filter.catch(exception, mockArgumentsHost);
+
+        expect(mockResponse.json).toHaveBeenCalledWith(
+          expect.objectContaining({
+            error: 'Error',
+          }),
+        );
+      });
+    });
   });
 });

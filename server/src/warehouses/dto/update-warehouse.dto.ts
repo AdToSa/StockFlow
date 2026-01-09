@@ -38,20 +38,20 @@ export class UpdateWarehouseDto {
   address?: string;
 
   /**
-   * City where the warehouse is located
+   * City where the warehouse is located (can be null to clear)
    * @example "Bogota"
    */
   @IsString({ message: 'City must be a string' })
   @IsOptional()
-  city?: string;
+  city?: string | null;
 
   /**
-   * Contact phone number for the warehouse
+   * Contact phone number for the warehouse (can be null to clear)
    * @example "+57 1 234 5678"
    */
   @IsString({ message: 'Phone must be a string' })
   @IsOptional()
-  phone?: string;
+  phone?: string | null;
 
   /**
    * Whether this is the default/main warehouse for the tenant

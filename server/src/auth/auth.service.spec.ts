@@ -897,6 +897,82 @@ describe('AuthService', () => {
       });
     });
 
+    it('should use default expiration when jwt.expiration config is undefined', async () => {
+      (configService.get as jest.Mock).mockImplementation((key: string) => {
+        const config: Record<string, string | undefined> = {
+          'jwt.secret': 'test-jwt-secret',
+          'jwt.expiration': undefined, // Missing expiration
+          'jwt.refreshSecret': 'test-refresh-secret',
+          'jwt.refreshExpiration': '7d',
+        };
+        return config[key];
+      });
+
+      await service.generateTokens(
+        'user-123',
+        'test@example.com',
+        UserRole.EMPLOYEE,
+        'tenant-123',
+      );
+
+      expect(jwtService.signAsync).toHaveBeenCalledWith(
+        expect.objectContaining({ type: 'access' }),
+        expect.objectContaining({ expiresIn: '15m' }), // Default value
+      );
+    });
+
+    it('should use default refresh expiration when jwt.refreshExpiration config is undefined', async () => {
+      (configService.get as jest.Mock).mockImplementation((key: string) => {
+        const config: Record<string, string | undefined> = {
+          'jwt.secret': 'test-jwt-secret',
+          'jwt.expiration': '15m',
+          'jwt.refreshSecret': 'test-refresh-secret',
+          'jwt.refreshExpiration': undefined, // Missing refresh expiration
+        };
+        return config[key];
+      });
+
+      await service.generateTokens(
+        'user-123',
+        'test@example.com',
+        UserRole.EMPLOYEE,
+        'tenant-123',
+      );
+
+      expect(jwtService.signAsync).toHaveBeenCalledWith(
+        expect.objectContaining({ type: 'refresh' }),
+        expect.objectContaining({ expiresIn: '7d' }), // Default value
+      );
+    });
+
+    it('should use default expirations when both configs are null', async () => {
+      (configService.get as jest.Mock).mockImplementation((key: string) => {
+        const config: Record<string, string | null> = {
+          'jwt.secret': 'test-jwt-secret',
+          'jwt.expiration': null,
+          'jwt.refreshSecret': 'test-refresh-secret',
+          'jwt.refreshExpiration': null,
+        };
+        return config[key];
+      });
+
+      await service.generateTokens(
+        'user-123',
+        'test@example.com',
+        UserRole.EMPLOYEE,
+        'tenant-123',
+      );
+
+      expect(jwtService.signAsync).toHaveBeenCalledWith(
+        expect.objectContaining({ type: 'access' }),
+        expect.objectContaining({ expiresIn: '15m' }),
+      );
+      expect(jwtService.signAsync).toHaveBeenCalledWith(
+        expect.objectContaining({ type: 'refresh' }),
+        expect.objectContaining({ expiresIn: '7d' }),
+      );
+    });
+
     it('should sign access token with correct payload and options', async () => {
       await service.generateTokens(
         'user-123',

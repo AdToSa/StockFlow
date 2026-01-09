@@ -41,12 +41,12 @@ export class UpdateUserDto {
   lastName?: string;
 
   /**
-   * User's phone number
+   * User's phone number (can be null to clear)
    * @example "+1234567890"
    */
   @IsString({ message: 'Phone must be a string' })
   @IsOptional()
-  phone?: string;
+  phone?: string | null;
 
   /**
    * User's role within the tenant (ADMIN only can change this)
@@ -65,10 +65,10 @@ export class UpdateUserDto {
   status?: UserStatus;
 
   /**
-   * User's avatar URL
+   * User's avatar URL (can be null to clear)
    * @example "https://example.com/avatar.jpg"
    */
   @IsString({ message: 'Avatar must be a string' })
   @IsOptional()
-  avatar?: string;
+  avatar?: string | null;
 }

@@ -580,6 +580,97 @@ describe('UsersService', () => {
         ).rejects.toThrow('Only administrators can change user status');
       });
     });
+
+    describe('phone update', () => {
+      it('should update phone when provided', async () => {
+        const phoneUpdate = { phone: '+9876543210' };
+        (prismaService.user.update as jest.Mock).mockResolvedValue({
+          ...mockUser,
+          phone: '+9876543210',
+        });
+
+        await service.update('user-123', phoneUpdate, currentAdmin);
+
+        expect(prismaService.user.update).toHaveBeenCalledWith({
+          where: { id: 'user-123' },
+          data: { phone: '+9876543210' },
+        });
+      });
+
+      it('should allow setting phone to null', async () => {
+        const phoneUpdate = { phone: null };
+        (prismaService.user.update as jest.Mock).mockResolvedValue({
+          ...mockUser,
+          phone: null,
+        });
+
+        await service.update('user-123', phoneUpdate, currentAdmin);
+
+        expect(prismaService.user.update).toHaveBeenCalledWith({
+          where: { id: 'user-123' },
+          data: { phone: null },
+        });
+      });
+    });
+
+    describe('avatar update', () => {
+      it('should update avatar when provided', async () => {
+        const avatarUpdate = { avatar: 'https://example.com/avatar.png' };
+        (prismaService.user.update as jest.Mock).mockResolvedValue({
+          ...mockUser,
+          avatar: 'https://example.com/avatar.png',
+        });
+
+        await service.update('user-123', avatarUpdate, currentAdmin);
+
+        expect(prismaService.user.update).toHaveBeenCalledWith({
+          where: { id: 'user-123' },
+          data: { avatar: 'https://example.com/avatar.png' },
+        });
+      });
+
+      it('should allow setting avatar to null', async () => {
+        const avatarUpdate = { avatar: null };
+        (prismaService.user.update as jest.Mock).mockResolvedValue({
+          ...mockUser,
+          avatar: null,
+        });
+
+        await service.update('user-123', avatarUpdate, currentAdmin);
+
+        expect(prismaService.user.update).toHaveBeenCalledWith({
+          where: { id: 'user-123' },
+          data: { avatar: null },
+        });
+      });
+    });
+
+    describe('multiple field updates', () => {
+      it('should update firstName, lastName, phone, and avatar together', async () => {
+        const multiUpdate = {
+          firstName: 'New First',
+          lastName: 'New Last',
+          phone: '+9876543210',
+          avatar: 'https://example.com/new-avatar.png',
+        };
+        (prismaService.user.update as jest.Mock).mockResolvedValue({
+          ...mockUser,
+          ...multiUpdate,
+        });
+
+        await service.update('user-123', multiUpdate, currentAdmin);
+
+        expect(prismaService.user.update).toHaveBeenCalledWith({
+          where: { id: 'user-123' },
+          data: {
+            firstName: 'New First',
+            lastName: 'New Last',
+            phone: '+9876543210',
+            avatar: 'https://example.com/new-avatar.png',
+          },
+        });
+      });
+    });
   });
 
   describe('delete', () => {

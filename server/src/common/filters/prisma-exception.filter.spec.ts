@@ -144,6 +144,25 @@ describe('PrismaExceptionFilter', () => {
         }),
       );
     });
+
+    it('should use default message when field_name is not provided', () => {
+      const exception = new Prisma.PrismaClientKnownRequestError(
+        'Foreign key constraint failed',
+        {
+          code: 'P2003',
+          clientVersion: '5.0.0',
+          meta: {},
+        },
+      );
+
+      filter.catch(exception, mockArgumentsHost);
+
+      expect(mockResponse.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: 'Invalid reference: related record does not exist',
+        }),
+      );
+    });
   });
 
   describe('P2025 - Record not found', () => {

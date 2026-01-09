@@ -590,6 +590,110 @@ describe('WarehousesService', () => {
 
       expect(tenantContextService.requireTenantId).toHaveBeenCalled();
     });
+
+    describe('individual field updates', () => {
+      it('should update city when provided', async () => {
+        const cityUpdate = { city: 'New City' };
+        (prismaService.warehouse.update as jest.Mock).mockResolvedValue({
+          ...mockWarehouse,
+          city: 'New City',
+        });
+
+        await service.update('warehouse-123', cityUpdate);
+
+        expect(prismaService.warehouse.update).toHaveBeenCalledWith({
+          where: { id: 'warehouse-123' },
+          data: { city: 'New City' },
+        });
+      });
+
+      it('should allow setting city to null', async () => {
+        const cityUpdate = { city: null };
+        (prismaService.warehouse.update as jest.Mock).mockResolvedValue({
+          ...mockWarehouse,
+          city: null,
+        });
+
+        await service.update('warehouse-123', cityUpdate);
+
+        expect(prismaService.warehouse.update).toHaveBeenCalledWith({
+          where: { id: 'warehouse-123' },
+          data: { city: null },
+        });
+      });
+
+      it('should update phone when provided', async () => {
+        const phoneUpdate = { phone: '+57 1 999 8888' };
+        (prismaService.warehouse.update as jest.Mock).mockResolvedValue({
+          ...mockWarehouse,
+          phone: '+57 1 999 8888',
+        });
+
+        await service.update('warehouse-123', phoneUpdate);
+
+        expect(prismaService.warehouse.update).toHaveBeenCalledWith({
+          where: { id: 'warehouse-123' },
+          data: { phone: '+57 1 999 8888' },
+        });
+      });
+
+      it('should allow setting phone to null', async () => {
+        const phoneUpdate = { phone: null };
+        (prismaService.warehouse.update as jest.Mock).mockResolvedValue({
+          ...mockWarehouse,
+          phone: null,
+        });
+
+        await service.update('warehouse-123', phoneUpdate);
+
+        expect(prismaService.warehouse.update).toHaveBeenCalledWith({
+          where: { id: 'warehouse-123' },
+          data: { phone: null },
+        });
+      });
+
+      it('should update status when provided', async () => {
+        const statusUpdate = { status: WarehouseStatus.INACTIVE };
+        (prismaService.warehouse.update as jest.Mock).mockResolvedValue({
+          ...mockWarehouse,
+          status: WarehouseStatus.INACTIVE,
+        });
+
+        await service.update('warehouse-123', statusUpdate);
+
+        expect(prismaService.warehouse.update).toHaveBeenCalledWith({
+          where: { id: 'warehouse-123' },
+          data: { status: WarehouseStatus.INACTIVE },
+        });
+      });
+
+      it('should update multiple fields at once', async () => {
+        const multiUpdate = {
+          name: 'Updated Warehouse',
+          address: 'New Address',
+          city: 'Cali',
+          phone: '+57 2 123 4567',
+          status: WarehouseStatus.ACTIVE,
+        };
+        (prismaService.warehouse.update as jest.Mock).mockResolvedValue({
+          ...mockWarehouse,
+          ...multiUpdate,
+        });
+
+        await service.update('warehouse-123', multiUpdate);
+
+        expect(prismaService.warehouse.update).toHaveBeenCalledWith({
+          where: { id: 'warehouse-123' },
+          data: expect.objectContaining({
+            name: 'Updated Warehouse',
+            address: 'New Address',
+            city: 'Cali',
+            phone: '+57 2 123 4567',
+            status: WarehouseStatus.ACTIVE,
+          }),
+        });
+      });
+    });
   });
 
   describe('delete', () => {

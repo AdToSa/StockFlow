@@ -237,6 +237,58 @@ describe('ProductsService', () => {
         expect.objectContaining({ orderBy: { name: 'asc' } }),
       );
     });
+
+    describe('lowStock filter', () => {
+      it('should filter low stock products via findAll with lowStock: true', async () => {
+        // mockProduct has stock=100, minStock=10 (not low)
+        // mockProduct2 has stock=5, minStock=20 (low stock)
+        (prismaService.product.findMany as jest.Mock).mockResolvedValue([
+          mockProduct,
+          mockProduct2,
+        ]);
+
+        const result = await service.findAll({ lowStock: true, page: 1, limit: 10 });
+
+        // Should only include the low stock product
+        expect(result.data.length).toBe(1);
+        expect(result.data[0].sku).toBe('SKU-002');
+        expect(result.meta.total).toBe(1);
+      });
+
+      it('should paginate low stock products correctly', async () => {
+        // Create many low stock products for pagination test
+        const lowStockProducts = Array.from({ length: 15 }, (_, i) => ({
+          ...mockProduct2,
+          id: `product-low-${i}`,
+          sku: `SKU-LOW-${i}`,
+          name: `Low Stock Product ${i}`,
+          stock: 5,
+          minStock: 20,
+        }));
+        (prismaService.product.findMany as jest.Mock).mockResolvedValue(
+          lowStockProducts,
+        );
+
+        const result = await service.findAll({ lowStock: true, page: 2, limit: 10 });
+
+        expect(result.meta.page).toBe(2);
+        expect(result.meta.limit).toBe(10);
+        expect(result.meta.totalPages).toBe(2);
+        expect(result.data.length).toBe(5); // Page 2 has 5 items
+      });
+
+      it('should return empty result when no low stock products exist', async () => {
+        (prismaService.product.findMany as jest.Mock).mockResolvedValue([
+          mockProduct, // stock=100, minStock=10 - not low stock
+        ]);
+
+        const result = await service.findAll({ lowStock: true });
+
+        expect(result.data).toEqual([]);
+        expect(result.meta.total).toBe(0);
+        expect(result.meta.totalPages).toBe(0);
+      });
+    });
   });
 
   describe('findLowStock', () => {
@@ -795,6 +847,163 @@ describe('ProductsService', () => {
       await service.update('product-123', updateDto);
 
       expect(tenantContextService.requireTenantId).toHaveBeenCalled();
+    });
+
+    describe('individual field updates', () => {
+      it('should update description when provided', async () => {
+        const descriptionUpdate = { description: 'New description' };
+        (prismaService.product.update as jest.Mock).mockResolvedValue({
+          ...mockProduct,
+          description: 'New description',
+        });
+
+        await service.update('product-123', descriptionUpdate);
+
+        expect(prismaService.product.update).toHaveBeenCalledWith({
+          where: { id: 'product-123' },
+          data: { description: 'New description' },
+        });
+      });
+
+      it('should update costPrice when provided', async () => {
+        const costPriceUpdate = { costPrice: 99.99 };
+        (prismaService.product.update as jest.Mock).mockResolvedValue({
+          ...mockProduct,
+          costPrice: { toNumber: () => 99.99 },
+        });
+
+        await service.update('product-123', costPriceUpdate);
+
+        expect(prismaService.product.update).toHaveBeenCalledWith({
+          where: { id: 'product-123' },
+          data: { costPrice: 99.99 },
+        });
+      });
+
+      it('should update salePrice when provided', async () => {
+        const salePriceUpdate = { salePrice: 149.99 };
+        (prismaService.product.update as jest.Mock).mockResolvedValue({
+          ...mockProduct,
+          salePrice: { toNumber: () => 149.99 },
+        });
+
+        await service.update('product-123', salePriceUpdate);
+
+        expect(prismaService.product.update).toHaveBeenCalledWith({
+          where: { id: 'product-123' },
+          data: { salePrice: 149.99 },
+        });
+      });
+
+      it('should update taxRate when provided', async () => {
+        const taxRateUpdate = { taxRate: 21 };
+        (prismaService.product.update as jest.Mock).mockResolvedValue({
+          ...mockProduct,
+          taxRate: { toNumber: () => 21 },
+        });
+
+        await service.update('product-123', taxRateUpdate);
+
+        expect(prismaService.product.update).toHaveBeenCalledWith({
+          where: { id: 'product-123' },
+          data: { taxRate: 21 },
+        });
+      });
+
+      it('should update minStock when provided', async () => {
+        const minStockUpdate = { minStock: 25 };
+        (prismaService.product.update as jest.Mock).mockResolvedValue({
+          ...mockProduct,
+          minStock: 25,
+        });
+
+        await service.update('product-123', minStockUpdate);
+
+        expect(prismaService.product.update).toHaveBeenCalledWith({
+          where: { id: 'product-123' },
+          data: { minStock: 25 },
+        });
+      });
+
+      it('should update brand when provided', async () => {
+        const brandUpdate = { brand: 'NewBrand' };
+        (prismaService.product.update as jest.Mock).mockResolvedValue({
+          ...mockProduct,
+          brand: 'NewBrand',
+        });
+
+        await service.update('product-123', brandUpdate);
+
+        expect(prismaService.product.update).toHaveBeenCalledWith({
+          where: { id: 'product-123' },
+          data: { brand: 'NewBrand' },
+        });
+      });
+
+      it('should update unit when provided', async () => {
+        const unitUpdate = { unit: 'KG' };
+        (prismaService.product.update as jest.Mock).mockResolvedValue({
+          ...mockProduct,
+          unit: 'KG',
+        });
+
+        await service.update('product-123', unitUpdate);
+
+        expect(prismaService.product.update).toHaveBeenCalledWith({
+          where: { id: 'product-123' },
+          data: { unit: 'KG' },
+        });
+      });
+
+      it('should update status when provided', async () => {
+        const statusUpdate = { status: ProductStatus.INACTIVE };
+        (prismaService.product.update as jest.Mock).mockResolvedValue({
+          ...mockProduct,
+          status: ProductStatus.INACTIVE,
+        });
+
+        await service.update('product-123', statusUpdate);
+
+        expect(prismaService.product.update).toHaveBeenCalledWith({
+          where: { id: 'product-123' },
+          data: { status: ProductStatus.INACTIVE },
+        });
+      });
+
+      it('should update multiple fields at once', async () => {
+        const multiUpdate = {
+          name: 'Updated Name',
+          description: 'Updated Description',
+          costPrice: 50,
+          salePrice: 100,
+          taxRate: 18,
+          minStock: 15,
+          brand: 'UpdatedBrand',
+          unit: 'LTR',
+          status: ProductStatus.OUT_OF_STOCK,
+        };
+        (prismaService.product.update as jest.Mock).mockResolvedValue({
+          ...mockProduct,
+          ...multiUpdate,
+        });
+
+        await service.update('product-123', multiUpdate);
+
+        expect(prismaService.product.update).toHaveBeenCalledWith({
+          where: { id: 'product-123' },
+          data: expect.objectContaining({
+            name: 'Updated Name',
+            description: 'Updated Description',
+            costPrice: 50,
+            salePrice: 100,
+            taxRate: 18,
+            minStock: 15,
+            brand: 'UpdatedBrand',
+            unit: 'LTR',
+            status: ProductStatus.OUT_OF_STOCK,
+          }),
+        });
+      });
     });
   });
 

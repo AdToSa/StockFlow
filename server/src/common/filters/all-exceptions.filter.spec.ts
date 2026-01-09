@@ -149,6 +149,58 @@ describe('AllExceptionsFilter', () => {
       );
     });
 
+    describe('extractMessage edge cases', () => {
+      it('should extract message from HttpException with object response containing string message', () => {
+        const exception = new HttpException(
+          { message: 'Object message string', statusCode: 400 },
+          HttpStatus.BAD_REQUEST,
+        );
+
+        filter.catch(exception, mockArgumentsHost);
+
+        expect(mockResponse.json).toHaveBeenCalledWith(
+          expect.objectContaining({
+            message: 'Object message string',
+          }),
+        );
+      });
+
+      it('should join array messages from HttpException response', () => {
+        const exception = new HttpException(
+          { message: ['First error', 'Second error'], statusCode: 400 },
+          HttpStatus.BAD_REQUEST,
+        );
+
+        filter.catch(exception, mockArgumentsHost);
+
+        expect(mockResponse.json).toHaveBeenCalledWith(
+          expect.objectContaining({
+            message: 'First error, Second error',
+          }),
+        );
+      });
+
+      it('should use exception.message when response object has no message field', () => {
+        const exception = new HttpException(
+          { error: 'Some error', statusCode: 400 },
+          HttpStatus.BAD_REQUEST,
+        );
+
+        filter.catch(exception, mockArgumentsHost);
+
+        // Falls back to exception.message since responseObj.message is undefined
+        expect(mockResponse.json).toHaveBeenCalled();
+      });
+
+      it('should handle null in response', () => {
+        const exception = new HttpException(null as unknown as string, HttpStatus.BAD_REQUEST);
+
+        filter.catch(exception, mockArgumentsHost);
+
+        expect(mockResponse.json).toHaveBeenCalled();
+      });
+    });
+
     it('should include debug information in development', () => {
       const exception = new Error('Test error');
 
