@@ -105,7 +105,9 @@ describe('TenantContextService', () => {
     it('should fallback to AsyncLocalStorage if request has no tenant info', () => {
       mockRequest.tenantId = undefined;
       mockRequest.user = undefined;
-      (tenantContext.getTenantId as jest.Mock).mockReturnValue('als-tenant-456');
+      (tenantContext.getTenantId as jest.Mock).mockReturnValue(
+        'als-tenant-456',
+      );
 
       const result = service.getTenantId();
       expect(result).toBe('als-tenant-456');
@@ -416,9 +418,7 @@ describe('TenantContextService', () => {
       await expect(service.requireActiveStatus()).rejects.toThrow(
         ForbiddenException,
       );
-      await expect(service.requireActiveStatus()).rejects.toThrow(
-        'suspended',
-      );
+      await expect(service.requireActiveStatus()).rejects.toThrow('suspended');
     });
 
     it('should throw for INACTIVE status', async () => {
@@ -430,9 +430,7 @@ describe('TenantContextService', () => {
       await expect(service.requireActiveStatus()).rejects.toThrow(
         ForbiddenException,
       );
-      await expect(service.requireActiveStatus()).rejects.toThrow(
-        'inactive',
-      );
+      await expect(service.requireActiveStatus()).rejects.toThrow('inactive');
     });
   });
 

@@ -258,7 +258,7 @@ export class TenantContextService {
           where: { tenantId },
         });
 
-      case 'invoices':
+      case 'invoices': {
         // Count invoices for the current month only
         const startOfMonth = new Date();
         startOfMonth.setDate(1);
@@ -270,14 +270,17 @@ export class TenantContextService {
             createdAt: { gte: startOfMonth },
           },
         });
+      }
 
       case 'warehouses':
         return this.prisma.warehouse.count({
           where: { tenantId },
         });
 
-      default:
-        throw new Error(`Unknown limit type: ${limitType}`);
+      default: {
+        const exhaustiveCheck: never = limitType;
+        throw new Error(`Unknown limit type: ${String(exhaustiveCheck)}`);
+      }
     }
   }
 
@@ -442,8 +445,10 @@ export class TenantContextService {
         return tenant.maxInvoices;
       case 'warehouses':
         return tenant.maxWarehouses;
-      default:
-        throw new Error(`Unknown limit type: ${limitType}`);
+      default: {
+        const exhaustiveCheck: never = limitType;
+        throw new Error(`Unknown limit type: ${String(exhaustiveCheck)}`);
+      }
     }
   }
 

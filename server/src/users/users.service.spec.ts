@@ -10,7 +10,7 @@ import * as bcrypt from 'bcrypt';
 import { UsersService } from './users.service';
 import { PrismaService } from '../prisma';
 import { TenantContextService } from '../common/services';
-import { UserRole, UserStatus, SubscriptionPlan, TenantStatus } from '@prisma/client';
+import { UserRole, UserStatus } from '@prisma/client';
 import { CreateUserDto, UpdateUserDto, ChangePasswordDto } from './dto';
 
 // Mock bcrypt
@@ -50,12 +50,14 @@ describe('UsersService', () => {
     role: UserRole.ADMIN,
   };
 
-  const mockManagerUser = {
+  // Kept for potential future test cases
+  const _mockManagerUser = {
     ...mockUser,
     id: 'manager-123',
     email: 'manager@example.com',
     role: UserRole.MANAGER,
   };
+  void _mockManagerUser;
 
   const mockPendingUser = {
     ...mockUser,
@@ -335,16 +337,22 @@ describe('UsersService', () => {
 
     it('should throw ForbiddenException when user limit reached', async () => {
       (tenantContextService.enforceLimit as jest.Mock).mockRejectedValue(
-        new ForbiddenException('Users limit reached (5). Upgrade your plan to create more.'),
+        new ForbiddenException(
+          'Users limit reached (5). Upgrade your plan to create more.',
+        ),
       );
 
-      await expect(service.create(createDto)).rejects.toThrow(ForbiddenException);
+      await expect(service.create(createDto)).rejects.toThrow(
+        ForbiddenException,
+      );
     });
 
     it('should throw ConflictException when email already exists', async () => {
       (prismaService.user.findUnique as jest.Mock).mockResolvedValue(mockUser);
 
-      await expect(service.create(createDto)).rejects.toThrow(ConflictException);
+      await expect(service.create(createDto)).rejects.toThrow(
+        ConflictException,
+      );
     });
 
     it('should throw ConflictException with correct message', async () => {
@@ -438,7 +446,9 @@ describe('UsersService', () => {
 
       it('should throw ConflictException when new email already exists', async () => {
         const emailUpdate = { email: 'existing@example.com' };
-        (prismaService.user.findUnique as jest.Mock).mockResolvedValue(mockAdminUser);
+        (prismaService.user.findUnique as jest.Mock).mockResolvedValue(
+          mockAdminUser,
+        );
 
         await expect(
           service.update('user-123', emailUpdate, currentAdmin),
@@ -477,7 +487,11 @@ describe('UsersService', () => {
           role: UserRole.MANAGER,
         });
 
-        const result = await service.update('user-123', roleUpdate, currentAdmin);
+        const result = await service.update(
+          'user-123',
+          roleUpdate,
+          currentAdmin,
+        );
 
         expect(result.role).toBe(UserRole.MANAGER);
       });
@@ -504,7 +518,9 @@ describe('UsersService', () => {
           id: 'manager-user',
           role: UserRole.MANAGER,
         };
-        (prismaService.user.findFirst as jest.Mock).mockResolvedValue(managerUser);
+        (prismaService.user.findFirst as jest.Mock).mockResolvedValue(
+          managerUser,
+        );
         const currentManager = { userId: 'manager-user', role: UserRole.ADMIN };
         const roleUpdate = { role: UserRole.ADMIN };
 
@@ -519,7 +535,9 @@ describe('UsersService', () => {
           id: 'manager-user',
           role: UserRole.MANAGER,
         };
-        (prismaService.user.findFirst as jest.Mock).mockResolvedValue(managerUser);
+        (prismaService.user.findFirst as jest.Mock).mockResolvedValue(
+          managerUser,
+        );
         const currentManager = { userId: 'manager-user', role: UserRole.ADMIN };
         const roleUpdate = { role: UserRole.ADMIN };
 
@@ -537,7 +555,11 @@ describe('UsersService', () => {
           status: UserStatus.SUSPENDED,
         });
 
-        const result = await service.update('user-123', statusUpdate, currentAdmin);
+        const result = await service.update(
+          'user-123',
+          statusUpdate,
+          currentAdmin,
+        );
 
         expect(result.status).toBe(UserStatus.SUSPENDED);
       });
@@ -710,7 +732,9 @@ describe('UsersService', () => {
 
   describe('approve', () => {
     beforeEach(() => {
-      (prismaService.user.findFirst as jest.Mock).mockResolvedValue(mockPendingUser);
+      (prismaService.user.findFirst as jest.Mock).mockResolvedValue(
+        mockPendingUser,
+      );
       (prismaService.user.update as jest.Mock).mockResolvedValue({
         ...mockPendingUser,
         status: UserStatus.ACTIVE,
@@ -793,7 +817,9 @@ describe('UsersService', () => {
 
     it('should throw BadRequestException when user is already suspended', async () => {
       const suspendedUser = { ...mockUser, status: UserStatus.SUSPENDED };
-      (prismaService.user.findFirst as jest.Mock).mockResolvedValue(suspendedUser);
+      (prismaService.user.findFirst as jest.Mock).mockResolvedValue(
+        suspendedUser,
+      );
 
       await expect(service.suspend('user-123', 'admin-123')).rejects.toThrow(
         BadRequestException,
@@ -802,7 +828,9 @@ describe('UsersService', () => {
 
     it('should throw correct message for already suspended user', async () => {
       const suspendedUser = { ...mockUser, status: UserStatus.SUSPENDED };
-      (prismaService.user.findFirst as jest.Mock).mockResolvedValue(suspendedUser);
+      (prismaService.user.findFirst as jest.Mock).mockResolvedValue(
+        suspendedUser,
+      );
 
       await expect(service.suspend('user-123', 'admin-123')).rejects.toThrow(
         'User is already suspended',
@@ -892,7 +920,9 @@ describe('UsersService', () => {
         lastName: 'User',
       });
 
-      expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('User created'));
+      expect(logSpy).toHaveBeenCalledWith(
+        expect.stringContaining('User created'),
+      );
     });
 
     it('should log when user is deleted', async () => {
@@ -902,7 +932,9 @@ describe('UsersService', () => {
 
       await service.delete('user-123', 'admin-123');
 
-      expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('User deleted'));
+      expect(logSpy).toHaveBeenCalledWith(
+        expect.stringContaining('User deleted'),
+      );
     });
 
     it('should log warning when user not found', async () => {

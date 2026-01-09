@@ -213,9 +213,7 @@ export class UsersService {
 
     // Non-admin users can only update their own profile
     if (!isAdmin && !isOwnProfile) {
-      throw new ForbiddenException(
-        'You can only update your own profile',
-      );
+      throw new ForbiddenException('You can only update your own profile');
     }
 
     // Build update data based on permissions
@@ -253,18 +251,24 @@ export class UsersService {
     // Role and status changes require ADMIN privileges
     if (dto.role !== undefined) {
       if (!isAdmin) {
-        throw new ForbiddenException('Only administrators can change user roles');
+        throw new ForbiddenException(
+          'Only administrators can change user roles',
+        );
       }
       // Prevent users from changing their own role to ADMIN (potential privilege escalation)
       if (isOwnProfile && dto.role === UserRole.ADMIN) {
-        throw new ForbiddenException('You cannot elevate your own role to ADMIN');
+        throw new ForbiddenException(
+          'You cannot elevate your own role to ADMIN',
+        );
       }
       updateData.role = dto.role;
     }
 
     if (dto.status !== undefined) {
       if (!isAdmin) {
-        throw new ForbiddenException('Only administrators can change user status');
+        throw new ForbiddenException(
+          'Only administrators can change user status',
+        );
       }
       updateData.status = dto.status;
     }
@@ -338,9 +342,7 @@ export class UsersService {
 
     // Only admin or the user themselves can change password
     if (!isAdmin && !isOwnProfile) {
-      throw new ForbiddenException(
-        'You can only change your own password',
-      );
+      throw new ForbiddenException('You can only change your own password');
     }
 
     // Find the user

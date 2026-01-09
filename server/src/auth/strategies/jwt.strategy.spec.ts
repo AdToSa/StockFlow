@@ -519,7 +519,7 @@ describe('JwtStrategy', () => {
       it('should return user data from database, not from payload', async () => {
         const ownerUser = {
           ...mockUser,
-          role: UserRole.OWNER,
+          role: UserRole.SUPER_ADMIN,
           email: 'owner@example.com',
           tenantId: 'different-tenant',
           tenant: mockTenant,
@@ -532,7 +532,7 @@ describe('JwtStrategy', () => {
 
         // Result should reflect actual user data from DB, not payload
         expect(result.email).toBe('owner@example.com');
-        expect(result.role).toBe(UserRole.OWNER);
+        expect(result.role).toBe(UserRole.SUPER_ADMIN);
         expect(result.tenantId).toBe('different-tenant');
       });
     });

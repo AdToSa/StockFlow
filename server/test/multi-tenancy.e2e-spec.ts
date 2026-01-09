@@ -22,12 +22,7 @@ import {
   NestModule,
 } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import {
-  IsString,
-  IsNumber,
-  IsOptional,
-  IsNotEmpty,
-} from 'class-validator';
+import { IsString, IsNumber, IsOptional, IsNotEmpty } from 'class-validator';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { PrismaModule, PrismaService } from '../src/prisma';
@@ -39,6 +34,28 @@ import { CurrentTenant, Roles } from '../src/common/decorators';
 import { UserRole, ProductStatus } from '@prisma/client';
 import { TenantMiddleware } from '../src/common/middleware';
 import * as bcrypt from 'bcrypt';
+
+// ============================================================================
+// RESPONSE TYPE INTERFACES
+// ============================================================================
+
+interface LoginResponse {
+  accessToken: string;
+  refreshToken: string;
+}
+
+interface ProductResponse {
+  id: string;
+  tenantId: string;
+  name: string;
+  sku: string;
+  description?: string;
+  salePrice: number;
+  tenant?: {
+    name: string;
+    slug: string;
+  };
+}
 
 // ============================================================================
 // TEST-SPECIFIC DTOs
@@ -348,10 +365,11 @@ describe('Multi-Tenancy E2E Tests', () => {
       .send({ email: 'user-a@test-tenant-a.com', password: 'TestPassword123!' })
       .expect(200);
 
+    const loginBodyA = loginResponseA.body as LoginResponse;
     userA = {
       id: userARecord.id,
       email: userARecord.email,
-      accessToken: loginResponseA.body.accessToken,
+      accessToken: loginBodyA.accessToken,
     };
 
     const loginResponseB = await request(app.getHttpServer())
@@ -359,10 +377,11 @@ describe('Multi-Tenancy E2E Tests', () => {
       .send({ email: 'user-b@test-tenant-b.com', password: 'TestPassword123!' })
       .expect(200);
 
+    const loginBodyB = loginResponseB.body as LoginResponse;
     userB = {
       id: userBRecord.id,
       email: userBRecord.email,
-      accessToken: loginResponseB.body.accessToken,
+      accessToken: loginBodyB.accessToken,
     };
 
     const loginResponseSuperAdmin = await request(app.getHttpServer())
@@ -370,10 +389,11 @@ describe('Multi-Tenancy E2E Tests', () => {
       .send({ email: 'super-admin@test.com', password: 'TestPassword123!' })
       .expect(200);
 
+    const loginBodySuperAdmin = loginResponseSuperAdmin.body as LoginResponse;
     superAdmin = {
       id: superAdminRecord.id,
       email: superAdminRecord.email,
-      accessToken: loginResponseSuperAdmin.body.accessToken,
+      accessToken: loginBodySuperAdmin.accessToken,
     };
   }
 
@@ -418,10 +438,11 @@ describe('Multi-Tenancy E2E Tests', () => {
         })
         .expect(201);
 
+      const body = response.body as ProductResponse;
       productA = {
-        id: response.body.id,
-        name: response.body.name,
-        sku: response.body.sku,
+        id: body.id,
+        name: body.name,
+        sku: body.sku,
       };
     });
 
@@ -431,9 +452,10 @@ describe('Multi-Tenancy E2E Tests', () => {
         .set('Authorization', `Bearer ${userA.accessToken}`)
         .expect(200);
 
-      expect(response.body).toBeInstanceOf(Array);
-      expect(response.body.length).toBeGreaterThanOrEqual(1);
-      expect(response.body.some((p: { id: string }) => p.id === productA.id)).toBe(true);
+      const products = response.body as ProductResponse[];
+      expect(products).toBeInstanceOf(Array);
+      expect(products.length).toBeGreaterThanOrEqual(1);
+      expect(products.some((p) => p.id === productA.id)).toBe(true);
     });
 
     it('should NOT allow Tenant B to see Tenant A products in list', async () => {
@@ -442,9 +464,10 @@ describe('Multi-Tenancy E2E Tests', () => {
         .set('Authorization', `Bearer ${userB.accessToken}`)
         .expect(200);
 
-      expect(response.body).toBeInstanceOf(Array);
+      const products = response.body as ProductResponse[];
+      expect(products).toBeInstanceOf(Array);
       // Tenant B should not see any of Tenant A's products
-      expect(response.body.some((p: { id: string }) => p.id === productA.id)).toBe(false);
+      expect(products.some((p) => p.id === productA.id)).toBe(false);
     });
 
     it('should NOT allow Tenant B to access Tenant A product by ID', async () => {
@@ -460,8 +483,9 @@ describe('Multi-Tenancy E2E Tests', () => {
         .set('Authorization', `Bearer ${userA.accessToken}`)
         .expect(200);
 
-      expect(response.body.id).toBe(productA.id);
-      expect(response.body.name).toBe(productA.name);
+      const product = response.body as ProductResponse;
+      expect(product.id).toBe(productA.id);
+      expect(product.name).toBe(productA.name);
     });
   });
 
@@ -482,9 +506,10 @@ describe('Multi-Tenancy E2E Tests', () => {
         })
         .expect(201);
 
-      expect(response.body.id).toBeDefined();
-      expect(response.body.tenantId).toBe(tenantB.id);
-      expect(response.body.name).toBe('Product from Tenant B');
+      const createdProduct = response.body as ProductResponse;
+      expect(createdProduct.id).toBeDefined();
+      expect(createdProduct.tenantId).toBe(tenantB.id);
+      expect(createdProduct.name).toBe('Product from Tenant B');
 
       // Verify Tenant A cannot see this product
       const listResponse = await request(app.getHttpServer())
@@ -492,7 +517,8 @@ describe('Multi-Tenancy E2E Tests', () => {
         .set('Authorization', `Bearer ${userA.accessToken}`)
         .expect(200);
 
-      expect(listResponse.body.some((p: { id: string }) => p.id === response.body.id)).toBe(false);
+      const productsA = listResponse.body as ProductResponse[];
+      expect(productsA.some((p) => p.id === createdProduct.id)).toBe(false);
 
       // Verify Tenant B can see this product
       const listResponseB = await request(app.getHttpServer())
@@ -500,7 +526,8 @@ describe('Multi-Tenancy E2E Tests', () => {
         .set('Authorization', `Bearer ${userB.accessToken}`)
         .expect(200);
 
-      expect(listResponseB.body.some((p: { id: string }) => p.id === response.body.id)).toBe(true);
+      const productsB = listResponseB.body as ProductResponse[];
+      expect(productsB.some((p) => p.id === createdProduct.id)).toBe(true);
     });
   });
 
@@ -524,7 +551,8 @@ describe('Multi-Tenancy E2E Tests', () => {
         })
         .expect(201);
 
-      productToUpdate = { id: updateResponse.body.id };
+      const updateProduct = updateResponse.body as ProductResponse;
+      productToUpdate = { id: updateProduct.id };
 
       const deleteResponse = await request(app.getHttpServer())
         .post('/test-products')
@@ -536,7 +564,8 @@ describe('Multi-Tenancy E2E Tests', () => {
         })
         .expect(201);
 
-      productToDelete = { id: deleteResponse.body.id };
+      const deleteProduct = deleteResponse.body as ProductResponse;
+      productToDelete = { id: deleteProduct.id };
     });
 
     it('should NOT allow Tenant B to update Tenant A product', async () => {
@@ -555,8 +584,9 @@ describe('Multi-Tenancy E2E Tests', () => {
         .set('Authorization', `Bearer ${userA.accessToken}`)
         .expect(200);
 
-      expect(verifyResponse.body.name).toBe('Product to Update');
-      expect(Number(verifyResponse.body.salePrice)).toBe(50);
+      const verifiedProduct = verifyResponse.body as ProductResponse;
+      expect(verifiedProduct.name).toBe('Product to Update');
+      expect(Number(verifiedProduct.salePrice)).toBe(50);
     });
 
     it('should allow Tenant A to update their own product', async () => {
@@ -569,8 +599,9 @@ describe('Multi-Tenancy E2E Tests', () => {
         })
         .expect(200);
 
-      expect(response.body.name).toBe('Updated by Tenant A');
-      expect(Number(response.body.salePrice)).toBe(150);
+      const updatedProduct = response.body as ProductResponse;
+      expect(updatedProduct.name).toBe('Updated by Tenant A');
+      expect(Number(updatedProduct.salePrice)).toBe(150);
     });
 
     it('should NOT allow Tenant B to delete Tenant A product', async () => {
@@ -585,7 +616,8 @@ describe('Multi-Tenancy E2E Tests', () => {
         .set('Authorization', `Bearer ${userA.accessToken}`)
         .expect(200);
 
-      expect(verifyResponse.body.id).toBe(productToDelete.id);
+      const verifiedProduct = verifyResponse.body as ProductResponse;
+      expect(verifiedProduct.id).toBe(productToDelete.id);
     });
 
     it('should allow Tenant A to delete their own product', async () => {
@@ -622,7 +654,11 @@ describe('Multi-Tenancy E2E Tests', () => {
         })
         .expect(201);
 
-      productFromA = { id: responseA.body.id, tenantId: responseA.body.tenantId };
+      const productA = responseA.body as ProductResponse;
+      productFromA = {
+        id: productA.id,
+        tenantId: productA.tenantId,
+      };
 
       // Create a product for Tenant B
       const responseB = await request(app.getHttpServer())
@@ -635,7 +671,11 @@ describe('Multi-Tenancy E2E Tests', () => {
         })
         .expect(201);
 
-      productFromB = { id: responseB.body.id, tenantId: responseB.body.tenantId };
+      const productB = responseB.body as ProductResponse;
+      productFromB = {
+        id: productB.id,
+        tenantId: productB.tenantId,
+      };
     });
 
     it('should allow Super Admin to see products from all tenants', async () => {
@@ -644,19 +684,20 @@ describe('Multi-Tenancy E2E Tests', () => {
         .set('Authorization', `Bearer ${superAdmin.accessToken}`)
         .expect(200);
 
-      expect(response.body).toBeInstanceOf(Array);
+      const products = response.body as ProductResponse[];
+      expect(products).toBeInstanceOf(Array);
 
       // Super Admin should see products from both tenants
-      const productIds = response.body.map((p: { id: string }) => p.id);
+      const productIds = products.map((p) => p.id);
       expect(productIds).toContain(productFromA.id);
       expect(productIds).toContain(productFromB.id);
 
       // Verify tenant information is included
-      const tenantAProduct = response.body.find((p: { id: string }) => p.id === productFromA.id);
-      const tenantBProduct = response.body.find((p: { id: string }) => p.id === productFromB.id);
+      const tenantAProduct = products.find((p) => p.id === productFromA.id);
+      const tenantBProduct = products.find((p) => p.id === productFromB.id);
 
-      expect(tenantAProduct.tenant.slug).toBe('test-tenant-a');
-      expect(tenantBProduct.tenant.slug).toBe('test-tenant-b');
+      expect(tenantAProduct?.tenant?.slug).toBe('test-tenant-a');
+      expect(tenantBProduct?.tenant?.slug).toBe('test-tenant-b');
     });
 
     it('should NOT allow regular admin to access super admin endpoint', async () => {
@@ -680,9 +721,7 @@ describe('Multi-Tenancy E2E Tests', () => {
 
   describe('Authentication Required', () => {
     it('should reject requests without authentication token', async () => {
-      await request(app.getHttpServer())
-        .get('/test-products')
-        .expect(401);
+      await request(app.getHttpServer()).get('/test-products').expect(401);
     });
 
     it('should reject requests with invalid token', async () => {
@@ -722,8 +761,9 @@ describe('Multi-Tenancy E2E Tests', () => {
         })
         .expect(201);
 
-      const createdProductId = createResponse.body.id;
-      expect(createResponse.body.tenantId).toBe(tenantA.id);
+      const createdProduct = createResponse.body as ProductResponse;
+      const createdProductId = createdProduct.id;
+      expect(createdProduct.tenantId).toBe(tenantA.id);
 
       // Step 2: Tenant B lists products - should NOT see Tenant A's product
       const listResponseB = await request(app.getHttpServer())
@@ -731,7 +771,8 @@ describe('Multi-Tenancy E2E Tests', () => {
         .set('Authorization', `Bearer ${userB.accessToken}`)
         .expect(200);
 
-      const tenantBProductIds = listResponseB.body.map((p: { id: string }) => p.id);
+      const tenantBProducts = listResponseB.body as ProductResponse[];
+      const tenantBProductIds = tenantBProducts.map((p) => p.id);
       expect(tenantBProductIds).not.toContain(createdProductId);
 
       // Step 3: Tenant B tries to access by ID - should get 404
@@ -759,8 +800,9 @@ describe('Multi-Tenancy E2E Tests', () => {
         .set('Authorization', `Bearer ${userA.accessToken}`)
         .expect(200);
 
-      expect(verifyResponse.body.name).toBe('Isolation Test Product');
-      expect(verifyResponse.body.tenantId).toBe(tenantA.id);
+      const verifiedProduct = verifyResponse.body as ProductResponse;
+      expect(verifiedProduct.name).toBe('Isolation Test Product');
+      expect(verifiedProduct.tenantId).toBe(tenantA.id);
 
       // Step 7: Super Admin can see the product
       const superAdminResponse = await request(app.getHttpServer())
@@ -768,7 +810,8 @@ describe('Multi-Tenancy E2E Tests', () => {
         .set('Authorization', `Bearer ${superAdmin.accessToken}`)
         .expect(200);
 
-      const superAdminProductIds = superAdminResponse.body.map((p: { id: string }) => p.id);
+      const superAdminProducts = superAdminResponse.body as ProductResponse[];
+      const superAdminProductIds = superAdminProducts.map((p) => p.id);
       expect(superAdminProductIds).toContain(createdProductId);
     });
   });

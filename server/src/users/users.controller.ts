@@ -16,7 +16,7 @@ import { UserRole } from '@prisma/client';
 import { UsersService } from './users.service';
 import type { UserResponse, PaginatedUsersResponse } from './users.service';
 import { CreateUserDto, UpdateUserDto, ChangePasswordDto } from './dto';
-import { JwtAuthGuard, RolesGuard } from '../auth/guards';
+import { JwtAuthGuard, RolesGuard } from '../auth';
 import { Roles, CurrentUser } from '../common/decorators';
 
 /**
@@ -68,7 +68,10 @@ export class UsersController {
     @Query('limit') limit?: string,
   ): Promise<PaginatedUsersResponse> {
     const pageNum = Math.max(1, parseInt(page ?? '1', 10) || 1);
-    const limitNum = Math.min(100, Math.max(1, parseInt(limit ?? '10', 10) || 10));
+    const limitNum = Math.min(
+      100,
+      Math.max(1, parseInt(limit ?? '10', 10) || 10),
+    );
 
     this.logger.log(`Listing users - page: ${pageNum}, limit: ${limitNum}`);
 
@@ -85,7 +88,9 @@ export class UsersController {
    * GET /users/me
    */
   @Get('me')
-  async getProfile(@CurrentUser() currentUser: CurrentUserContext): Promise<UserResponse> {
+  async getProfile(
+    @CurrentUser() currentUser: CurrentUserContext,
+  ): Promise<UserResponse> {
     this.logger.log(`Getting profile for user: ${currentUser.userId}`);
     return this.usersService.findOne(currentUser.userId);
   }
