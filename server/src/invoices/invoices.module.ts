@@ -1,6 +1,7 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { InvoicesController } from './invoices.controller';
 import { InvoicesService } from './invoices.service';
+import { PaymentsModule } from '../payments';
 
 /**
  * InvoicesModule provides invoice management functionality including:
@@ -27,6 +28,7 @@ import { InvoicesService } from './invoices.service';
  * - Monthly invoice limits are enforced per tenant plan
  */
 @Module({
+  imports: [forwardRef(() => PaymentsModule)],
   controllers: [InvoicesController],
   providers: [InvoicesService],
   exports: [InvoicesService],

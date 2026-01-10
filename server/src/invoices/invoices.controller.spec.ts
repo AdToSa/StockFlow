@@ -13,12 +13,15 @@ import {
   AddInvoiceItemDto,
   UpdateInvoiceItemDto,
 } from './dto';
-import { InvoiceStatus, PaymentStatus } from '@prisma/client';
+import { InvoiceStatus, PaymentStatus, PaymentMethod } from '@prisma/client';
 import type { RequestUser } from '../auth';
+import { PaymentsService } from '../payments';
+import type { PaymentResponse } from '../payments';
 
 describe('InvoicesController', () => {
   let controller: InvoicesController;
   let invoicesService: jest.Mocked<InvoicesService>;
+  let paymentsService: jest.Mocked<PaymentsService>;
 
   // Test data
   const mockUser: RequestUser = {
@@ -160,13 +163,25 @@ describe('InvoicesController', () => {
       deleteItem: jest.fn(),
     };
 
+    const mockPaymentsService = {
+      findAll: jest.fn(),
+      findOne: jest.fn(),
+      findByInvoice: jest.fn(),
+      create: jest.fn(),
+      delete: jest.fn(),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       controllers: [InvoicesController],
-      providers: [{ provide: InvoicesService, useValue: mockInvoicesService }],
+      providers: [
+        { provide: InvoicesService, useValue: mockInvoicesService },
+        { provide: PaymentsService, useValue: mockPaymentsService },
+      ],
     }).compile();
 
     controller = module.get<InvoicesController>(InvoicesController);
     invoicesService = module.get(InvoicesService);
+    paymentsService = module.get(PaymentsService);
 
     // Suppress logger output during tests
     jest.spyOn(Logger.prototype, 'log').mockImplementation();
@@ -816,6 +831,111 @@ describe('InvoicesController', () => {
       await expect(
         controller.deleteItem('invoice-123', 'item-123', mockUser),
       ).rejects.toThrow(BadRequestException);
+    });
+  });
+
+  // ============================================================================
+  // INVOICE PAYMENTS ENDPOINT TESTS
+  // ============================================================================
+
+  describe('getPayments', () => {
+    const mockPayments: PaymentResponse[] = [
+      {
+        id: 'payment-123',
+        tenantId: 'tenant-123',
+        invoiceId: 'invoice-123',
+        amount: 500,
+        method: PaymentMethod.CASH,
+        reference: 'REC-001',
+        notes: 'Partial payment',
+        paymentDate: new Date('2024-01-15'),
+        createdAt: new Date('2024-01-15'),
+        invoice: {
+          id: 'invoice-123',
+          invoiceNumber: 'INV-00001',
+          total: 1000,
+          paymentStatus: PaymentStatus.PARTIALLY_PAID,
+          customer: {
+            id: 'customer-123',
+            name: 'Test Customer',
+          },
+        },
+      },
+      {
+        id: 'payment-456',
+        tenantId: 'tenant-123',
+        invoiceId: 'invoice-123',
+        amount: 300,
+        method: PaymentMethod.BANK_TRANSFER,
+        reference: 'REC-002',
+        notes: null,
+        paymentDate: new Date('2024-01-20'),
+        createdAt: new Date('2024-01-20'),
+        invoice: {
+          id: 'invoice-123',
+          invoiceNumber: 'INV-00001',
+          total: 1000,
+          paymentStatus: PaymentStatus.PARTIALLY_PAID,
+          customer: {
+            id: 'customer-123',
+            name: 'Test Customer',
+          },
+        },
+      },
+    ];
+
+    it('should return payments for an invoice', async () => {
+      paymentsService.findByInvoice.mockResolvedValue(mockPayments);
+
+      const result = await controller.getPayments('invoice-123');
+
+      expect(result).toEqual(mockPayments);
+      expect(paymentsService.findByInvoice).toHaveBeenCalledWith('invoice-123');
+    });
+
+    it('should call paymentsService with correct invoice id', async () => {
+      paymentsService.findByInvoice.mockResolvedValue(mockPayments);
+
+      await controller.getPayments('invoice-456');
+
+      expect(paymentsService.findByInvoice).toHaveBeenCalledWith('invoice-456');
+    });
+
+    it('should return empty array when no payments exist', async () => {
+      paymentsService.findByInvoice.mockResolvedValue([]);
+
+      const result = await controller.getPayments('invoice-123');
+
+      expect(result).toEqual([]);
+    });
+
+    it('should propagate NotFoundException when invoice not found', async () => {
+      const error = new NotFoundException('Factura no encontrada');
+      paymentsService.findByInvoice.mockRejectedValue(error);
+
+      await expect(controller.getPayments('nonexistent')).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+
+    it('should propagate service errors', async () => {
+      const error = new Error('Database error');
+      paymentsService.findByInvoice.mockRejectedValue(error);
+
+      await expect(controller.getPayments('invoice-123')).rejects.toThrow(
+        error,
+      );
+    });
+
+    it('should log the invoice id being queried', async () => {
+      paymentsService.findByInvoice.mockResolvedValue(mockPayments);
+      const logSpy = jest.spyOn(Logger.prototype, 'log');
+
+      await controller.getPayments('invoice-123');
+
+      expect(logSpy).toHaveBeenCalledWith(
+        'Getting payments for invoice: invoice-123',
+      );
     });
   });
 });

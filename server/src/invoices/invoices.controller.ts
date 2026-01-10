@@ -28,6 +28,8 @@ import {
 import { JwtAuthGuard, RolesGuard } from '../auth';
 import { Roles, CurrentUser } from '../common/decorators';
 import type { RequestUser } from '../auth/types';
+import { PaymentsService } from '../payments';
+import type { PaymentResponse } from '../payments';
 
 /**
  * InvoicesController handles all invoice management endpoints.
@@ -47,7 +49,10 @@ import type { RequestUser } from '../auth/types';
 export class InvoicesController {
   private readonly logger = new Logger(InvoicesController.name);
 
-  constructor(private readonly invoicesService: InvoicesService) {}
+  constructor(
+    private readonly invoicesService: InvoicesService,
+    private readonly paymentsService: PaymentsService,
+  ) {}
 
   /**
    * Lists all invoices in the current tenant with filtering and pagination.
@@ -209,6 +214,27 @@ export class InvoicesController {
     this.logger.log(`Cancelling invoice: ${id}`);
 
     return this.invoicesService.cancel(id);
+  }
+
+  // ============================================================================
+  // INVOICE PAYMENTS ENDPOINT
+  // ============================================================================
+
+  /**
+   * Gets all payments for a specific invoice.
+   * Accessible by all authenticated users.
+   *
+   * @param id - Invoice ID to get payments for
+   * @returns Array of payments for the invoice
+   *
+   * @example
+   * GET /invoices/:id/payments
+   */
+  @Get(':id/payments')
+  async getPayments(@Param('id') id: string): Promise<PaymentResponse[]> {
+    this.logger.log(`Getting payments for invoice: ${id}`);
+
+    return this.paymentsService.findByInvoice(id);
   }
 
   // ============================================================================
