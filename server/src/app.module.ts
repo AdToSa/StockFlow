@@ -12,6 +12,7 @@ import { WarehousesModule } from './warehouses';
 import { CustomersModule } from './customers';
 import { InvoicesModule } from './invoices';
 import { PaymentsModule } from './payments';
+import { StockMovementsModule } from './stock-movements';
 import { configuration, validateEnv } from './config';
 import { TenantMiddleware } from './common/middleware';
 
@@ -33,6 +34,7 @@ import { TenantMiddleware } from './common/middleware';
     CustomersModule,
     InvoicesModule,
     PaymentsModule,
+    StockMovementsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

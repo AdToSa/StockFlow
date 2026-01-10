@@ -1,0 +1,1308 @@
+import { Test, TestingModule } from '@nestjs/testing';
+import {
+  NotFoundException,
+  BadRequestException,
+  Logger,
+} from '@nestjs/common';
+import { MovementType } from '@prisma/client';
+import { StockMovementsService } from './stock-movements.service';
+import { PrismaService } from '../prisma';
+import { TenantContextService } from '../common';
+import type { CreateMovementDto, FilterMovementsDto } from './dto';
+
+describe('StockMovementsService', () => {
+  let service: StockMovementsService;
+  let prismaService: jest.Mocked<PrismaService>;
+  let tenantContextService: jest.Mocked<TenantContextService>;
+
+  // Test data
+  const mockTenantId = 'tenant-123';
+  const mockUserId = 'user-123';
+
+  const mockProduct = {
+    id: 'product-123',
+    tenantId: mockTenantId,
+    name: 'Test Product',
+    sku: 'TEST-001',
+    stock: 100,
+  };
+
+  const mockWarehouse = {
+    id: 'warehouse-123',
+    tenantId: mockTenantId,
+    name: 'Main Warehouse',
+    code: 'ALM-01',
+  };
+
+  const mockUser = {
+    id: mockUserId,
+    firstName: 'John',
+    lastName: 'Doe',
+  };
+
+  const mockStockMovement = {
+    id: 'movement-123',
+    tenantId: mockTenantId,
+    productId: mockProduct.id,
+    warehouseId: mockWarehouse.id,
+    userId: mockUserId,
+    type: MovementType.ADJUSTMENT,
+    quantity: 10,
+    reason: 'Physical inventory correction',
+    notes: 'Found extra units',
+    invoiceId: null,
+    createdAt: new Date('2024-01-15'),
+    product: {
+      id: mockProduct.id,
+      sku: mockProduct.sku,
+      name: mockProduct.name,
+    },
+    warehouse: {
+      id: mockWarehouse.id,
+      code: mockWarehouse.code,
+      name: mockWarehouse.name,
+    },
+    user: {
+      id: mockUser.id,
+      firstName: mockUser.firstName,
+      lastName: mockUser.lastName,
+    },
+  };
+
+  const mockStockMovement2 = {
+    ...mockStockMovement,
+    id: 'movement-456',
+    quantity: -5,
+    reason: 'Damaged goods',
+    notes: 'Items found damaged in storage',
+    createdAt: new Date('2024-01-20'),
+  };
+
+  beforeEach(async () => {
+    jest.clearAllMocks();
+
+    // Create mock implementations
+    const mockPrismaService = {
+      stockMovement: {
+        findMany: jest.fn(),
+        findFirst: jest.fn(),
+        create: jest.fn(),
+        count: jest.fn(),
+      },
+      product: {
+        findFirst: jest.fn(),
+        update: jest.fn(),
+      },
+      warehouse: {
+        findFirst: jest.fn(),
+      },
+      $transaction: jest.fn(),
+    };
+
+    const mockTenantContextService = {
+      getTenantId: jest.fn().mockReturnValue(mockTenantId),
+      requireTenantId: jest.fn().mockReturnValue(mockTenantId),
+    };
+
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        StockMovementsService,
+        { provide: PrismaService, useValue: mockPrismaService },
+        { provide: TenantContextService, useValue: mockTenantContextService },
+      ],
+    }).compile();
+
+    service = module.get<StockMovementsService>(StockMovementsService);
+    prismaService = module.get(PrismaService);
+    tenantContextService = module.get(TenantContextService);
+
+    // Suppress logger output during tests
+    jest.spyOn(Logger.prototype, 'debug').mockImplementation();
+    jest.spyOn(Logger.prototype, 'log').mockImplementation();
+    jest.spyOn(Logger.prototype, 'warn').mockImplementation();
+    jest.spyOn(Logger.prototype, 'error').mockImplementation();
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  describe('constructor', () => {
+    it('should be defined', () => {
+      expect(service).toBeDefined();
+    });
+  });
+
+  describe('findAll', () => {
+    beforeEach(() => {
+      (prismaService.stockMovement.findMany as jest.Mock).mockResolvedValue([
+        mockStockMovement,
+        mockStockMovement2,
+      ]);
+      (prismaService.stockMovement.count as jest.Mock).mockResolvedValue(2);
+    });
+
+    it('should return paginated stock movements', async () => {
+      const result = await service.findAll({});
+
+      expect(result.data).toHaveLength(2);
+      expect(result.meta).toEqual({
+        total: 2,
+        page: 1,
+        limit: 10,
+        totalPages: 1,
+      });
+    });
+
+    it('should use default empty object when called with no parameter', async () => {
+      // This tests the default parameter: filters: FilterMovementsDto = {}
+      const result = await service.findAll();
+
+      expect(result.data).toHaveLength(2);
+      expect(result.meta).toEqual({
+        total: 2,
+        page: 1,
+        limit: 10,
+        totalPages: 1,
+      });
+      expect(prismaService.stockMovement.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ skip: 0, take: 10 }),
+      );
+    });
+
+    it('should calculate correct pagination for page 2', async () => {
+      (prismaService.stockMovement.findMany as jest.Mock).mockResolvedValue([
+        mockStockMovement,
+      ]);
+      (prismaService.stockMovement.count as jest.Mock).mockResolvedValue(15);
+
+      const result = await service.findAll({ page: 2, limit: 10 });
+
+      expect(result.meta.page).toBe(2);
+      expect(result.meta.totalPages).toBe(2);
+      expect(prismaService.stockMovement.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ skip: 10, take: 10 }),
+      );
+    });
+
+    it('should calculate correct skip for page 3 with limit 5', async () => {
+      (prismaService.stockMovement.findMany as jest.Mock).mockResolvedValue([
+        mockStockMovement,
+      ]);
+      (prismaService.stockMovement.count as jest.Mock).mockResolvedValue(25);
+
+      const result = await service.findAll({ page: 3, limit: 5 });
+
+      expect(result.meta.page).toBe(3);
+      expect(result.meta.limit).toBe(5);
+      expect(result.meta.totalPages).toBe(5);
+      expect(prismaService.stockMovement.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ skip: 10, take: 5 }),
+      );
+    });
+
+    it('should require tenant context', async () => {
+      await service.findAll({});
+
+      expect(tenantContextService.requireTenantId).toHaveBeenCalled();
+    });
+
+    it('should return empty array when no movements exist', async () => {
+      (prismaService.stockMovement.findMany as jest.Mock).mockResolvedValue([]);
+      (prismaService.stockMovement.count as jest.Mock).mockResolvedValue(0);
+
+      const result = await service.findAll({});
+
+      expect(result.data).toEqual([]);
+      expect(result.meta.total).toBe(0);
+      expect(result.meta.totalPages).toBe(0);
+    });
+
+    it('should use default pagination values', async () => {
+      await service.findAll({});
+
+      expect(prismaService.stockMovement.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ skip: 0, take: 10 }),
+      );
+    });
+
+    it('should order movements by createdAt descending', async () => {
+      await service.findAll({});
+
+      expect(prismaService.stockMovement.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ orderBy: { createdAt: 'desc' } }),
+      );
+    });
+
+    describe('filters', () => {
+      it('should filter by productId', async () => {
+        const filters: FilterMovementsDto = { productId: mockProduct.id };
+
+        await service.findAll(filters);
+
+        expect(prismaService.stockMovement.findMany).toHaveBeenCalledWith(
+          expect.objectContaining({
+            where: expect.objectContaining({
+              tenantId: mockTenantId,
+              productId: mockProduct.id,
+            }),
+          }),
+        );
+      });
+
+      it('should filter by warehouseId', async () => {
+        const filters: FilterMovementsDto = { warehouseId: mockWarehouse.id };
+
+        await service.findAll(filters);
+
+        expect(prismaService.stockMovement.findMany).toHaveBeenCalledWith(
+          expect.objectContaining({
+            where: expect.objectContaining({
+              tenantId: mockTenantId,
+              warehouseId: mockWarehouse.id,
+            }),
+          }),
+        );
+      });
+
+      it('should filter by movement type', async () => {
+        const filters: FilterMovementsDto = { type: MovementType.ADJUSTMENT };
+
+        await service.findAll(filters);
+
+        expect(prismaService.stockMovement.findMany).toHaveBeenCalledWith(
+          expect.objectContaining({
+            where: expect.objectContaining({
+              tenantId: mockTenantId,
+              type: MovementType.ADJUSTMENT,
+            }),
+          }),
+        );
+      });
+
+      it('should filter by fromDate only', async () => {
+        const fromDate = new Date('2024-01-01');
+        const filters: FilterMovementsDto = { fromDate };
+
+        await service.findAll(filters);
+
+        expect(prismaService.stockMovement.findMany).toHaveBeenCalledWith(
+          expect.objectContaining({
+            where: expect.objectContaining({
+              tenantId: mockTenantId,
+              createdAt: { gte: fromDate },
+            }),
+          }),
+        );
+      });
+
+      it('should filter by toDate only', async () => {
+        const toDate = new Date('2024-12-31');
+        const filters: FilterMovementsDto = { toDate };
+
+        await service.findAll(filters);
+
+        expect(prismaService.stockMovement.findMany).toHaveBeenCalledWith(
+          expect.objectContaining({
+            where: expect.objectContaining({
+              tenantId: mockTenantId,
+              createdAt: { lte: toDate },
+            }),
+          }),
+        );
+      });
+
+      it('should filter by date range (fromDate and toDate)', async () => {
+        const fromDate = new Date('2024-01-01');
+        const toDate = new Date('2024-12-31');
+        const filters: FilterMovementsDto = { fromDate, toDate };
+
+        await service.findAll(filters);
+
+        expect(prismaService.stockMovement.findMany).toHaveBeenCalledWith(
+          expect.objectContaining({
+            where: expect.objectContaining({
+              tenantId: mockTenantId,
+              createdAt: { gte: fromDate, lte: toDate },
+            }),
+          }),
+        );
+      });
+
+      it('should combine multiple filters', async () => {
+        const filters: FilterMovementsDto = {
+          productId: mockProduct.id,
+          warehouseId: mockWarehouse.id,
+          type: MovementType.SALE,
+        };
+
+        await service.findAll(filters);
+
+        expect(prismaService.stockMovement.findMany).toHaveBeenCalledWith(
+          expect.objectContaining({
+            where: expect.objectContaining({
+              tenantId: mockTenantId,
+              productId: mockProduct.id,
+              warehouseId: mockWarehouse.id,
+              type: MovementType.SALE,
+            }),
+          }),
+        );
+      });
+
+      it('should not include createdAt filter when neither fromDate nor toDate provided', async () => {
+        await service.findAll({});
+
+        const callArg = (prismaService.stockMovement.findMany as jest.Mock).mock
+          .calls[0][0];
+        expect(callArg.where.createdAt).toBeUndefined();
+      });
+    });
+
+    it('should include product, warehouse, and user in response', async () => {
+      const result = await service.findAll({});
+
+      expect(result.data[0].product).toBeDefined();
+      expect(result.data[0].warehouse).toBeDefined();
+      expect(result.data[0].user).toBeDefined();
+    });
+
+    it('should include relations in query', async () => {
+      await service.findAll({});
+
+      expect(prismaService.stockMovement.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          include: {
+            product: {
+              select: {
+                id: true,
+                sku: true,
+                name: true,
+              },
+            },
+            warehouse: {
+              select: {
+                id: true,
+                code: true,
+                name: true,
+              },
+            },
+            user: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+              },
+            },
+          },
+        }),
+      );
+    });
+  });
+
+  describe('findOne', () => {
+    beforeEach(() => {
+      (prismaService.stockMovement.findFirst as jest.Mock).mockResolvedValue(
+        mockStockMovement,
+      );
+    });
+
+    it('should return a stock movement by id', async () => {
+      const result = await service.findOne('movement-123');
+
+      expect(result.id).toBe('movement-123');
+      expect(result.quantity).toBe(10);
+      expect(result.type).toBe(MovementType.ADJUSTMENT);
+    });
+
+    it('should require tenant context', async () => {
+      await service.findOne('movement-123');
+
+      expect(tenantContextService.requireTenantId).toHaveBeenCalled();
+    });
+
+    it('should query with tenant filter', async () => {
+      await service.findOne('movement-123');
+
+      expect(prismaService.stockMovement.findFirst).toHaveBeenCalledWith({
+        where: { id: 'movement-123', tenantId: mockTenantId },
+        include: {
+          product: {
+            select: {
+              id: true,
+              sku: true,
+              name: true,
+            },
+          },
+          warehouse: {
+            select: {
+              id: true,
+              code: true,
+              name: true,
+            },
+          },
+          user: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+            },
+          },
+        },
+      });
+    });
+
+    it('should throw NotFoundException when movement not found', async () => {
+      (prismaService.stockMovement.findFirst as jest.Mock).mockResolvedValue(
+        null,
+      );
+
+      await expect(service.findOne('invalid-id')).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+
+    it('should throw NotFoundException with Spanish message', async () => {
+      (prismaService.stockMovement.findFirst as jest.Mock).mockResolvedValue(
+        null,
+      );
+
+      await expect(service.findOne('invalid-id')).rejects.toThrow(
+        'Movimiento de stock no encontrado',
+      );
+    });
+
+    it('should include product relation in response', async () => {
+      const result = await service.findOne('movement-123');
+
+      expect(result.product).toBeDefined();
+      expect(result.product?.sku).toBe('TEST-001');
+    });
+
+    it('should include warehouse relation in response', async () => {
+      const result = await service.findOne('movement-123');
+
+      expect(result.warehouse).toBeDefined();
+      expect(result.warehouse?.code).toBe('ALM-01');
+    });
+
+    it('should include user relation in response', async () => {
+      const result = await service.findOne('movement-123');
+
+      expect(result.user).toBeDefined();
+      expect(result.user?.firstName).toBe('John');
+    });
+  });
+
+  describe('findByProduct', () => {
+    beforeEach(() => {
+      (prismaService.product.findFirst as jest.Mock).mockResolvedValue(
+        mockProduct,
+      );
+      (prismaService.stockMovement.findMany as jest.Mock).mockResolvedValue([
+        mockStockMovement,
+        mockStockMovement2,
+      ]);
+      (prismaService.stockMovement.count as jest.Mock).mockResolvedValue(2);
+    });
+
+    it('should return all movements for a product', async () => {
+      const result = await service.findByProduct('product-123');
+
+      expect(result.data).toHaveLength(2);
+      expect(result.data[0].productId).toBe('product-123');
+    });
+
+    it('should require tenant context', async () => {
+      await service.findByProduct('product-123');
+
+      expect(tenantContextService.requireTenantId).toHaveBeenCalled();
+    });
+
+    it('should throw NotFoundException when product not found', async () => {
+      (prismaService.product.findFirst as jest.Mock).mockResolvedValue(null);
+
+      await expect(service.findByProduct('invalid-id')).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+
+    it('should throw NotFoundException with Spanish message when product not found', async () => {
+      (prismaService.product.findFirst as jest.Mock).mockResolvedValue(null);
+
+      await expect(service.findByProduct('invalid-id')).rejects.toThrow(
+        'Producto no encontrado',
+      );
+    });
+
+    it('should verify product belongs to tenant', async () => {
+      await service.findByProduct('product-123');
+
+      expect(prismaService.product.findFirst).toHaveBeenCalledWith({
+        where: { id: 'product-123', tenantId: mockTenantId },
+      });
+    });
+
+    it('should pass filters to findAll', async () => {
+      const filters: FilterMovementsDto = {
+        page: 2,
+        limit: 5,
+        type: MovementType.ADJUSTMENT,
+      };
+
+      await service.findByProduct('product-123', filters);
+
+      expect(prismaService.stockMovement.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            productId: 'product-123',
+            type: MovementType.ADJUSTMENT,
+          }),
+          skip: 5,
+          take: 5,
+        }),
+      );
+    });
+
+    it('should use default empty object when filters not provided', async () => {
+      await service.findByProduct('product-123');
+
+      expect(prismaService.stockMovement.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            productId: 'product-123',
+          }),
+          skip: 0,
+          take: 10,
+        }),
+      );
+    });
+
+    it('should return empty array when no movements exist for product', async () => {
+      (prismaService.stockMovement.findMany as jest.Mock).mockResolvedValue([]);
+      (prismaService.stockMovement.count as jest.Mock).mockResolvedValue(0);
+
+      const result = await service.findByProduct('product-123');
+
+      expect(result.data).toEqual([]);
+      expect(result.meta.total).toBe(0);
+    });
+  });
+
+  describe('findByWarehouse', () => {
+    beforeEach(() => {
+      (prismaService.warehouse.findFirst as jest.Mock).mockResolvedValue(
+        mockWarehouse,
+      );
+      (prismaService.stockMovement.findMany as jest.Mock).mockResolvedValue([
+        mockStockMovement,
+        mockStockMovement2,
+      ]);
+      (prismaService.stockMovement.count as jest.Mock).mockResolvedValue(2);
+    });
+
+    it('should return all movements for a warehouse', async () => {
+      const result = await service.findByWarehouse('warehouse-123');
+
+      expect(result.data).toHaveLength(2);
+      expect(result.data[0].warehouseId).toBe('warehouse-123');
+    });
+
+    it('should require tenant context', async () => {
+      await service.findByWarehouse('warehouse-123');
+
+      expect(tenantContextService.requireTenantId).toHaveBeenCalled();
+    });
+
+    it('should throw NotFoundException when warehouse not found', async () => {
+      (prismaService.warehouse.findFirst as jest.Mock).mockResolvedValue(null);
+
+      await expect(service.findByWarehouse('invalid-id')).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+
+    it('should throw NotFoundException with Spanish message when warehouse not found', async () => {
+      (prismaService.warehouse.findFirst as jest.Mock).mockResolvedValue(null);
+
+      await expect(service.findByWarehouse('invalid-id')).rejects.toThrow(
+        'Almacen no encontrado',
+      );
+    });
+
+    it('should verify warehouse belongs to tenant', async () => {
+      await service.findByWarehouse('warehouse-123');
+
+      expect(prismaService.warehouse.findFirst).toHaveBeenCalledWith({
+        where: { id: 'warehouse-123', tenantId: mockTenantId },
+      });
+    });
+
+    it('should pass filters to findAll', async () => {
+      const filters: FilterMovementsDto = {
+        page: 2,
+        limit: 5,
+        type: MovementType.TRANSFER,
+      };
+
+      await service.findByWarehouse('warehouse-123', filters);
+
+      expect(prismaService.stockMovement.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            warehouseId: 'warehouse-123',
+            type: MovementType.TRANSFER,
+          }),
+          skip: 5,
+          take: 5,
+        }),
+      );
+    });
+
+    it('should use default empty object when filters not provided', async () => {
+      await service.findByWarehouse('warehouse-123');
+
+      expect(prismaService.stockMovement.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            warehouseId: 'warehouse-123',
+          }),
+          skip: 0,
+          take: 10,
+        }),
+      );
+    });
+
+    it('should return empty array when no movements exist for warehouse', async () => {
+      (prismaService.stockMovement.findMany as jest.Mock).mockResolvedValue([]);
+      (prismaService.stockMovement.count as jest.Mock).mockResolvedValue(0);
+
+      const result = await service.findByWarehouse('warehouse-123');
+
+      expect(result.data).toEqual([]);
+      expect(result.meta.total).toBe(0);
+    });
+  });
+
+  describe('create', () => {
+    const createDto: CreateMovementDto = {
+      productId: 'product-123',
+      warehouseId: 'warehouse-123',
+      quantity: 10,
+      reason: 'Inventory count correction',
+      notes: 'Found extra units',
+    };
+
+    beforeEach(() => {
+      (prismaService.product.findFirst as jest.Mock).mockResolvedValue(
+        mockProduct,
+      );
+      (prismaService.warehouse.findFirst as jest.Mock).mockResolvedValue(
+        mockWarehouse,
+      );
+      (prismaService.$transaction as jest.Mock).mockImplementation(
+        async (callback: (tx: typeof prismaService) => Promise<unknown>) => {
+          const txMock = {
+            product: {
+              update: jest.fn().mockResolvedValue(mockProduct),
+            },
+            stockMovement: {
+              create: jest.fn().mockResolvedValue(mockStockMovement),
+            },
+          };
+          return callback(txMock as unknown as typeof prismaService);
+        },
+      );
+    });
+
+    it('should create a movement and return it', async () => {
+      const result = await service.create(createDto, mockUserId);
+
+      expect(result.id).toBe('movement-123');
+      expect(result.quantity).toBe(10);
+      expect(result.type).toBe(MovementType.ADJUSTMENT);
+    });
+
+    it('should require tenant context', async () => {
+      await service.create(createDto, mockUserId);
+
+      expect(tenantContextService.requireTenantId).toHaveBeenCalled();
+    });
+
+    it('should verify product exists and belongs to tenant', async () => {
+      await service.create(createDto, mockUserId);
+
+      expect(prismaService.product.findFirst).toHaveBeenCalledWith({
+        where: { id: 'product-123', tenantId: mockTenantId },
+      });
+    });
+
+    it('should throw NotFoundException when product not found', async () => {
+      (prismaService.product.findFirst as jest.Mock).mockResolvedValue(null);
+
+      await expect(service.create(createDto, mockUserId)).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+
+    it('should throw NotFoundException with Spanish message when product not found', async () => {
+      (prismaService.product.findFirst as jest.Mock).mockResolvedValue(null);
+
+      await expect(service.create(createDto, mockUserId)).rejects.toThrow(
+        'Producto no encontrado',
+      );
+    });
+
+    it('should verify warehouse exists when warehouseId provided', async () => {
+      await service.create(createDto, mockUserId);
+
+      expect(prismaService.warehouse.findFirst).toHaveBeenCalledWith({
+        where: { id: 'warehouse-123', tenantId: mockTenantId },
+      });
+    });
+
+    it('should throw NotFoundException when warehouse not found', async () => {
+      (prismaService.warehouse.findFirst as jest.Mock).mockResolvedValue(null);
+
+      await expect(service.create(createDto, mockUserId)).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+
+    it('should throw NotFoundException with Spanish message when warehouse not found', async () => {
+      (prismaService.warehouse.findFirst as jest.Mock).mockResolvedValue(null);
+
+      await expect(service.create(createDto, mockUserId)).rejects.toThrow(
+        'Almacen no encontrado',
+      );
+    });
+
+    it('should not verify warehouse when warehouseId not provided', async () => {
+      const dtoWithoutWarehouse: CreateMovementDto = {
+        productId: 'product-123',
+        quantity: 10,
+        reason: 'Inventory correction',
+      };
+
+      await service.create(dtoWithoutWarehouse, mockUserId);
+
+      expect(prismaService.warehouse.findFirst).not.toHaveBeenCalled();
+    });
+
+    it('should throw BadRequestException when stock would go negative', async () => {
+      const negativeDto: CreateMovementDto = {
+        productId: 'product-123',
+        quantity: -150, // More than current stock of 100
+        reason: 'Large adjustment',
+      };
+
+      await expect(service.create(negativeDto, mockUserId)).rejects.toThrow(
+        BadRequestException,
+      );
+    });
+
+    it('should throw BadRequestException with descriptive Spanish message for negative stock', async () => {
+      const negativeDto: CreateMovementDto = {
+        productId: 'product-123',
+        quantity: -150,
+        reason: 'Large adjustment',
+      };
+
+      await expect(service.create(negativeDto, mockUserId)).rejects.toThrow(
+        'El ajuste resultaria en stock negativo. Stock actual: 100, ajuste: -150',
+      );
+    });
+
+    it('should allow adjustment that brings stock to exactly zero', async () => {
+      const exactZeroDto: CreateMovementDto = {
+        productId: 'product-123',
+        quantity: -100, // Exactly current stock
+        reason: 'Clear inventory',
+      };
+
+      await service.create(exactZeroDto, mockUserId);
+
+      expect(prismaService.$transaction).toHaveBeenCalled();
+    });
+
+    it('should successfully create adjustment with positive quantity', async () => {
+      const positiveDto: CreateMovementDto = {
+        productId: 'product-123',
+        quantity: 50,
+        reason: 'Stock received',
+      };
+
+      await service.create(positiveDto, mockUserId);
+
+      expect(prismaService.$transaction).toHaveBeenCalled();
+    });
+
+    it('should successfully create adjustment with negative quantity within stock limits', async () => {
+      const negativeDto: CreateMovementDto = {
+        productId: 'product-123',
+        quantity: -50, // Less than current stock of 100
+        reason: 'Stock removed',
+      };
+
+      await service.create(negativeDto, mockUserId);
+
+      expect(prismaService.$transaction).toHaveBeenCalled();
+    });
+
+    it('should use transaction for movement creation', async () => {
+      await service.create(createDto, mockUserId);
+
+      expect(prismaService.$transaction).toHaveBeenCalled();
+    });
+
+    it('should update product stock within transaction', async () => {
+      let productUpdateData: unknown;
+      (prismaService.$transaction as jest.Mock).mockImplementation(
+        async (callback: (tx: typeof prismaService) => Promise<unknown>) => {
+          const txMock = {
+            product: {
+              update: jest.fn().mockImplementation((data: unknown) => {
+                productUpdateData = data;
+                return mockProduct;
+              }),
+            },
+            stockMovement: {
+              create: jest.fn().mockResolvedValue(mockStockMovement),
+            },
+          };
+          return callback(txMock as unknown as typeof prismaService);
+        },
+      );
+
+      await service.create(createDto, mockUserId);
+
+      expect(productUpdateData).toEqual({
+        where: { id: 'product-123' },
+        data: { stock: 110 }, // 100 + 10
+      });
+    });
+
+    it('should calculate correct new stock for positive adjustment', async () => {
+      let productUpdateData: unknown;
+      (prismaService.$transaction as jest.Mock).mockImplementation(
+        async (callback: (tx: typeof prismaService) => Promise<unknown>) => {
+          const txMock = {
+            product: {
+              update: jest.fn().mockImplementation((data: unknown) => {
+                productUpdateData = data;
+                return mockProduct;
+              }),
+            },
+            stockMovement: {
+              create: jest.fn().mockResolvedValue(mockStockMovement),
+            },
+          };
+          return callback(txMock as unknown as typeof prismaService);
+        },
+      );
+
+      const positiveDto: CreateMovementDto = {
+        productId: 'product-123',
+        quantity: 25,
+        reason: 'Stock increase',
+      };
+
+      await service.create(positiveDto, mockUserId);
+
+      expect(productUpdateData).toEqual(
+        expect.objectContaining({
+          data: { stock: 125 }, // 100 + 25
+        }),
+      );
+    });
+
+    it('should calculate correct new stock for negative adjustment', async () => {
+      let productUpdateData: unknown;
+      (prismaService.$transaction as jest.Mock).mockImplementation(
+        async (callback: (tx: typeof prismaService) => Promise<unknown>) => {
+          const txMock = {
+            product: {
+              update: jest.fn().mockImplementation((data: unknown) => {
+                productUpdateData = data;
+                return mockProduct;
+              }),
+            },
+            stockMovement: {
+              create: jest.fn().mockResolvedValue(mockStockMovement),
+            },
+          };
+          return callback(txMock as unknown as typeof prismaService);
+        },
+      );
+
+      const negativeDto: CreateMovementDto = {
+        productId: 'product-123',
+        quantity: -30,
+        reason: 'Stock decrease',
+      };
+
+      await service.create(negativeDto, mockUserId);
+
+      expect(productUpdateData).toEqual(
+        expect.objectContaining({
+          data: { stock: 70 }, // 100 - 30
+        }),
+      );
+    });
+
+    it('should create movement record with correct data', async () => {
+      let movementCreateData: unknown;
+      (prismaService.$transaction as jest.Mock).mockImplementation(
+        async (callback: (tx: typeof prismaService) => Promise<unknown>) => {
+          const txMock = {
+            product: {
+              update: jest.fn().mockResolvedValue(mockProduct),
+            },
+            stockMovement: {
+              create: jest.fn().mockImplementation((data: unknown) => {
+                movementCreateData = data;
+                return mockStockMovement;
+              }),
+            },
+          };
+          return callback(txMock as unknown as typeof prismaService);
+        },
+      );
+
+      await service.create(createDto, mockUserId);
+
+      expect(movementCreateData).toEqual(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            tenantId: mockTenantId,
+            productId: 'product-123',
+            warehouseId: 'warehouse-123',
+            userId: mockUserId,
+            type: MovementType.ADJUSTMENT,
+            quantity: 10,
+            reason: 'Inventory count correction',
+            notes: 'Found extra units',
+          }),
+        }),
+      );
+    });
+
+    it('should set warehouseId to null when not provided', async () => {
+      let movementCreateData: { data: { warehouseId: string | null } };
+      (prismaService.$transaction as jest.Mock).mockImplementation(
+        async (callback: (tx: typeof prismaService) => Promise<unknown>) => {
+          const txMock = {
+            product: {
+              update: jest.fn().mockResolvedValue(mockProduct),
+            },
+            stockMovement: {
+              create: jest.fn().mockImplementation((data: unknown) => {
+                movementCreateData = data as {
+                  data: { warehouseId: string | null };
+                };
+                return mockStockMovement;
+              }),
+            },
+          };
+          return callback(txMock as unknown as typeof prismaService);
+        },
+      );
+
+      const dtoWithoutWarehouse: CreateMovementDto = {
+        productId: 'product-123',
+        quantity: 10,
+        reason: 'Correction',
+      };
+
+      await service.create(dtoWithoutWarehouse, mockUserId);
+
+      expect(movementCreateData!.data.warehouseId).toBeNull();
+    });
+
+    it('should set userId to null when not provided', async () => {
+      let movementCreateData: { data: { userId: string | null } };
+      (prismaService.$transaction as jest.Mock).mockImplementation(
+        async (callback: (tx: typeof prismaService) => Promise<unknown>) => {
+          const txMock = {
+            product: {
+              update: jest.fn().mockResolvedValue(mockProduct),
+            },
+            stockMovement: {
+              create: jest.fn().mockImplementation((data: unknown) => {
+                movementCreateData = data as { data: { userId: string | null } };
+                return mockStockMovement;
+              }),
+            },
+          };
+          return callback(txMock as unknown as typeof prismaService);
+        },
+      );
+
+      await service.create(createDto); // No userId provided
+
+      expect(movementCreateData!.data.userId).toBeNull();
+    });
+
+    it('should set notes to null when not provided', async () => {
+      let movementCreateData: { data: { notes: string | null } };
+      (prismaService.$transaction as jest.Mock).mockImplementation(
+        async (callback: (tx: typeof prismaService) => Promise<unknown>) => {
+          const txMock = {
+            product: {
+              update: jest.fn().mockResolvedValue(mockProduct),
+            },
+            stockMovement: {
+              create: jest.fn().mockImplementation((data: unknown) => {
+                movementCreateData = data as { data: { notes: string | null } };
+                return mockStockMovement;
+              }),
+            },
+          };
+          return callback(txMock as unknown as typeof prismaService);
+        },
+      );
+
+      const dtoWithoutNotes: CreateMovementDto = {
+        productId: 'product-123',
+        quantity: 10,
+        reason: 'Correction',
+      };
+
+      await service.create(dtoWithoutNotes, mockUserId);
+
+      expect(movementCreateData!.data.notes).toBeNull();
+    });
+
+    it('should always set movement type to ADJUSTMENT', async () => {
+      let movementCreateData: { data: { type: MovementType } };
+      (prismaService.$transaction as jest.Mock).mockImplementation(
+        async (callback: (tx: typeof prismaService) => Promise<unknown>) => {
+          const txMock = {
+            product: {
+              update: jest.fn().mockResolvedValue(mockProduct),
+            },
+            stockMovement: {
+              create: jest.fn().mockImplementation((data: unknown) => {
+                movementCreateData = data as { data: { type: MovementType } };
+                return mockStockMovement;
+              }),
+            },
+          };
+          return callback(txMock as unknown as typeof prismaService);
+        },
+      );
+
+      await service.create(createDto, mockUserId);
+
+      expect(movementCreateData!.data.type).toBe(MovementType.ADJUSTMENT);
+    });
+
+    it('should include relations in create query', async () => {
+      let movementCreateData: { include: unknown };
+      (prismaService.$transaction as jest.Mock).mockImplementation(
+        async (callback: (tx: typeof prismaService) => Promise<unknown>) => {
+          const txMock = {
+            product: {
+              update: jest.fn().mockResolvedValue(mockProduct),
+            },
+            stockMovement: {
+              create: jest.fn().mockImplementation((data: unknown) => {
+                movementCreateData = data as { include: unknown };
+                return mockStockMovement;
+              }),
+            },
+          };
+          return callback(txMock as unknown as typeof prismaService);
+        },
+      );
+
+      await service.create(createDto, mockUserId);
+
+      expect(movementCreateData!.include).toEqual({
+        product: {
+          select: {
+            id: true,
+            sku: true,
+            name: true,
+          },
+        },
+        warehouse: {
+          select: {
+            id: true,
+            code: true,
+            name: true,
+          },
+        },
+        user: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+          },
+        },
+      });
+    });
+  });
+
+  describe('response mapping', () => {
+    it('should correctly map movement to response format', async () => {
+      (prismaService.stockMovement.findFirst as jest.Mock).mockResolvedValue(
+        mockStockMovement,
+      );
+
+      const result = await service.findOne('movement-123');
+
+      expect(result).toEqual({
+        id: 'movement-123',
+        tenantId: mockTenantId,
+        productId: 'product-123',
+        warehouseId: 'warehouse-123',
+        userId: mockUserId,
+        type: MovementType.ADJUSTMENT,
+        quantity: 10,
+        reason: 'Physical inventory correction',
+        notes: 'Found extra units',
+        invoiceId: null,
+        createdAt: expect.any(Date),
+        product: {
+          id: 'product-123',
+          sku: 'TEST-001',
+          name: 'Test Product',
+        },
+        warehouse: {
+          id: 'warehouse-123',
+          code: 'ALM-01',
+          name: 'Main Warehouse',
+        },
+        user: {
+          id: mockUserId,
+          firstName: 'John',
+          lastName: 'Doe',
+        },
+      });
+    });
+
+    it('should handle movement without product relation', async () => {
+      const movementWithoutProduct = {
+        ...mockStockMovement,
+        product: undefined,
+      };
+      (prismaService.stockMovement.findFirst as jest.Mock).mockResolvedValue(
+        movementWithoutProduct,
+      );
+
+      const result = await service.findOne('movement-123');
+
+      expect(result.id).toBe('movement-123');
+      expect(result.product).toBeUndefined();
+    });
+
+    it('should handle movement without warehouse relation', async () => {
+      const movementWithoutWarehouse = {
+        ...mockStockMovement,
+        warehouse: undefined,
+        warehouseId: null,
+      };
+      (prismaService.stockMovement.findFirst as jest.Mock).mockResolvedValue(
+        movementWithoutWarehouse,
+      );
+
+      const result = await service.findOne('movement-123');
+
+      expect(result.id).toBe('movement-123');
+      expect(result.warehouse).toBeUndefined();
+    });
+
+    it('should handle movement without user relation', async () => {
+      const movementWithoutUser = {
+        ...mockStockMovement,
+        user: undefined,
+        userId: null,
+      };
+      (prismaService.stockMovement.findFirst as jest.Mock).mockResolvedValue(
+        movementWithoutUser,
+      );
+
+      const result = await service.findOne('movement-123');
+
+      expect(result.id).toBe('movement-123');
+      expect(result.user).toBeUndefined();
+    });
+
+    it('should handle movement with null warehouse (explicitly null)', async () => {
+      const movementWithNullWarehouse = {
+        ...mockStockMovement,
+        warehouse: null,
+        warehouseId: null,
+      };
+      (prismaService.stockMovement.findFirst as jest.Mock).mockResolvedValue(
+        movementWithNullWarehouse,
+      );
+
+      const result = await service.findOne('movement-123');
+
+      expect(result.warehouseId).toBeNull();
+      expect(result.warehouse).toBeUndefined();
+    });
+
+    it('should handle movement with null user (explicitly null)', async () => {
+      const movementWithNullUser = {
+        ...mockStockMovement,
+        user: null,
+        userId: null,
+      };
+      (prismaService.stockMovement.findFirst as jest.Mock).mockResolvedValue(
+        movementWithNullUser,
+      );
+
+      const result = await service.findOne('movement-123');
+
+      expect(result.userId).toBeNull();
+      expect(result.user).toBeUndefined();
+    });
+  });
+
+  describe('buildPaginatedResponse', () => {
+    it('should calculate totalPages as 0 when total is 0', async () => {
+      (prismaService.stockMovement.findMany as jest.Mock).mockResolvedValue([]);
+      (prismaService.stockMovement.count as jest.Mock).mockResolvedValue(0);
+
+      const result = await service.findAll({});
+
+      expect(result.meta.totalPages).toBe(0);
+    });
+
+    it('should calculate correct totalPages for exact division', async () => {
+      (prismaService.stockMovement.findMany as jest.Mock).mockResolvedValue([
+        mockStockMovement,
+      ]);
+      (prismaService.stockMovement.count as jest.Mock).mockResolvedValue(20);
+
+      const result = await service.findAll({ page: 1, limit: 10 });
+
+      expect(result.meta.totalPages).toBe(2);
+    });
+
+    it('should round up totalPages for non-exact division', async () => {
+      (prismaService.stockMovement.findMany as jest.Mock).mockResolvedValue([
+        mockStockMovement,
+      ]);
+      (prismaService.stockMovement.count as jest.Mock).mockResolvedValue(25);
+
+      const result = await service.findAll({ page: 1, limit: 10 });
+
+      expect(result.meta.totalPages).toBe(3);
+    });
+
+    it('should return totalPages as 1 for single item', async () => {
+      (prismaService.stockMovement.findMany as jest.Mock).mockResolvedValue([
+        mockStockMovement,
+      ]);
+      (prismaService.stockMovement.count as jest.Mock).mockResolvedValue(1);
+
+      const result = await service.findAll({ page: 1, limit: 10 });
+
+      expect(result.meta.totalPages).toBe(1);
+    });
+  });
+});
