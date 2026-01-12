@@ -64,6 +64,56 @@ export class EnvironmentVariables {
   )
   @IsOptional()
   FRONTEND_URL: string = 'http://localhost:5173';
+
+  // ============================================================================
+  // MAIL CONFIGURATION (Optional - for email notifications)
+  // ============================================================================
+
+  /**
+   * SMTP server hostname.
+   * If not set, email notifications will be disabled.
+   * Example: smtp.gmail.com, smtp.sendgrid.net
+   */
+  @IsString()
+  @IsOptional()
+  MAIL_HOST?: string;
+
+  /**
+   * SMTP server port.
+   * Common values: 25 (unencrypted), 465 (SSL), 587 (TLS)
+   * Default: 587
+   */
+  @IsNumber()
+  @Min(1)
+  @Max(65535)
+  @IsOptional()
+  MAIL_PORT?: number = 587;
+
+  /**
+   * SMTP authentication username.
+   * Usually your email address or API key name.
+   */
+  @IsString()
+  @IsOptional()
+  MAIL_USER?: string;
+
+  /**
+   * SMTP authentication password.
+   * For services like Gmail, use an app-specific password.
+   * For SendGrid, use your API key.
+   */
+  @IsString()
+  @IsOptional()
+  MAIL_PASSWORD?: string;
+
+  /**
+   * Default sender email address.
+   * Format: "Display Name <email@domain.com>" or just "email@domain.com"
+   * Default: "StockFlow <noreply@stockflow.com>"
+   */
+  @IsString()
+  @IsOptional()
+  MAIL_FROM?: string = 'StockFlow <noreply@stockflow.com>';
 }
 
 /**

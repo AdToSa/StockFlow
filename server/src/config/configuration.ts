@@ -27,12 +27,24 @@ export interface JwtConfig {
 }
 
 /**
+ * Mail configuration interface
+ */
+export interface MailConfig {
+  host: string | undefined;
+  port: number;
+  user: string | undefined;
+  password: string | undefined;
+  from: string;
+}
+
+/**
  * Complete application configuration interface
  */
 export interface Configuration {
   app: AppConfig;
   database: DatabaseConfig;
   jwt: JwtConfig;
+  mail: MailConfig;
 }
 
 /**
@@ -71,6 +83,20 @@ export const jwtConfig = registerAs(
 );
 
 /**
+ * Mail configuration factory
+ */
+export const mailConfig = registerAs(
+  'mail',
+  (): MailConfig => ({
+    host: process.env.MAIL_HOST,
+    port: parseInt(process.env.MAIL_PORT || '587', 10),
+    user: process.env.MAIL_USER,
+    password: process.env.MAIL_PASSWORD,
+    from: process.env.MAIL_FROM || 'StockFlow <noreply@stockflow.com>',
+  }),
+);
+
+/**
  * Combined configuration factory function
  * Returns the complete configuration object
  */
@@ -88,5 +114,12 @@ export default (): Configuration => ({
     refreshSecret: process.env.JWT_REFRESH_SECRET || '',
     expiration: process.env.JWT_EXPIRATION || '15m',
     refreshExpiration: process.env.JWT_REFRESH_EXPIRATION || '7d',
+  },
+  mail: {
+    host: process.env.MAIL_HOST,
+    port: parseInt(process.env.MAIL_PORT || '587', 10),
+    user: process.env.MAIL_USER,
+    password: process.env.MAIL_PASSWORD,
+    from: process.env.MAIL_FROM || 'StockFlow <noreply@stockflow.com>',
   },
 });

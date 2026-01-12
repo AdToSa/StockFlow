@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Low Stock Alert</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      line-height: 1.6;
+      color: #333333;
+      background-color: #f5f5f5;
+    }
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    .email-wrapper {
+      background-color: #ffffff;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      overflow: hidden;
+    }
+    .header {
+      background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+      color: #ffffff;
+      padding: 30px;
+      text-align: center;
+    }
+    .header h1 {
+      margin: 0;
+      font-size: 24px;
+      font-weight: 600;
+    }
+    .header .alert-icon {
+      font-size: 48px;
+      margin-bottom: 10px;
+    }
+    .header .subtitle {
+      margin-top: 8px;
+      font-size: 14px;
+      opacity: 0.9;
+    }
+    .content {
+      padding: 30px;
+    }
+    .summary-box {
+      background-color: #fef2f2;
+      border: 1px solid #fecaca;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 25px;
+      text-align: center;
+    }
+    .summary-box .count {
+      font-size: 48px;
+      font-weight: 700;
+      color: #dc2626;
+      line-height: 1;
+    }
+    .summary-box .label {
+      font-size: 14px;
+      color: #991b1b;
+      margin-top: 5px;
+    }
+    .message {
+      font-size: 15px;
+      color: #4b5563;
+      margin-bottom: 20px;
+    }
+    .product-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 20px 0;
+    }
+    .product-table th {
+      background-color: #f3f4f6;
+      padding: 12px 15px;
+      text-align: left;
+      font-size: 12px;
+      font-weight: 600;
+      color: #374151;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      border-bottom: 2px solid #e5e7eb;
+    }
+    .product-table td {
+      padding: 12px 15px;
+      border-bottom: 1px solid #e5e7eb;
+      font-size: 14px;
+      color: #4b5563;
+    }
+    .product-table tr:hover td {
+      background-color: #f9fafb;
+    }
+    .stock-critical {
+      color: #dc2626;
+      font-weight: 600;
+    }
+    .stock-warning {
+      color: #f59e0b;
+      font-weight: 600;
+    }
+    .stock-indicator {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      margin-right: 6px;
+    }
+    .indicator-critical {
+      background-color: #dc2626;
+    }
+    .indicator-warning {
+      background-color: #f59e0b;
+    }
+    .cta-button {
+      display: inline-block;
+      background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+      color: #ffffff !important;
+      padding: 14px 32px;
+      text-decoration: none;
+      border-radius: 6px;
+      font-weight: 600;
+      font-size: 16px;
+      margin: 20px 0;
+    }
+    .button-container {
+      text-align: center;
+      margin: 25px 0;
+    }
+    .info-box {
+      background-color: #f0f9ff;
+      border-left: 4px solid #2563eb;
+      padding: 15px 20px;
+      margin: 25px 0;
+      border-radius: 0 8px 8px 0;
+    }
+    .info-box p {
+      margin: 0;
+      font-size: 14px;
+      color: #1e40af;
+    }
+    .footer {
+      background-color: #f9fafb;
+      padding: 20px 30px;
+      text-align: center;
+      border-top: 1px solid #e5e7eb;
+    }
+    .footer p {
+      margin: 5px 0;
+      font-size: 12px;
+      color: #6b7280;
+    }
+    @media only screen and (max-width: 600px) {
+      .product-table th,
+      .product-table td {
+        padding: 8px 10px;
+        font-size: 12px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="email-wrapper">
+      <div class="header">
+        <div class="alert-icon">!</div>
+        <h1>Low Stock Alert</h1>
+        <div class="subtitle">{{tenantName}}</div>
+      </div>
+
+      <div class="content">
+        <div class="summary-box">
+          <div class="count">{{productCount}}</div>
+          <div class="label">Product{{#if (gt productCount 1)}}s{{/if}} Below Minimum Stock</div>
+        </div>
+
+        <p class="message">
+          The following products in your inventory have fallen below their minimum stock levels
+          and may need to be reordered soon:
+        </p>
+
+        <table class="product-table">
+          <thead>
+            <tr>
+              <th>SKU</th>
+              <th>Product Name</th>
+              <th>Current</th>
+              <th>Min Stock</th>
+            </tr>
+          </thead>
+          <tbody>
+            {{#each products}}
+            <tr>
+              <td><strong>{{this.sku}}</strong></td>
+              <td>{{this.name}}</td>
+              <td>
+                {{#if (eq this.currentStock 0)}}
+                <span class="stock-indicator indicator-critical"></span>
+                <span class="stock-critical">{{this.currentStock}}</span>
+                {{else}}
+                <span class="stock-indicator indicator-warning"></span>
+                <span class="stock-warning">{{this.currentStock}}</span>
+                {{/if}}
+              </td>
+              <td>{{this.minStock}}</td>
+            </tr>
+            {{/each}}
+          </tbody>
+        </table>
+
+        <div class="info-box">
+          <p>
+            <strong>Tip:</strong> Review your inventory levels regularly and set appropriate
+            minimum stock thresholds to avoid stockouts.
+          </p>
+        </div>
+
+        <div class="button-container">
+          <a href="{{dashboardUrl}}" class="cta-button">View Inventory</a>
+        </div>
+      </div>
+
+      <div class="footer">
+        <p>This is an automated alert from StockFlow</p>
+        <p>You are receiving this because you are an admin of {{tenantName}}</p>
+        <p>&copy; {{year}} StockFlow. All rights reserved.</p>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
