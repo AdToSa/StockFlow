@@ -207,12 +207,12 @@ describe('DashboardController', () => {
     it('should work with different user roles', async () => {
       dashboardService.getDashboard.mockResolvedValue(mockDashboardResponse);
 
-      const staffUser: RequestUser = {
+      const employeeUser: RequestUser = {
         ...mockUser,
-        role: UserRole.STAFF,
+        role: UserRole.EMPLOYEE,
       };
 
-      const result = await controller.getDashboard(staffUser);
+      const result = await controller.getDashboard(employeeUser);
 
       expect(result).toEqual(mockDashboardResponse);
     });
