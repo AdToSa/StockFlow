@@ -16,6 +16,7 @@ import { StockMovementsModule } from './stock-movements';
 import { DashboardModule } from './dashboard';
 import { ReportsModule } from './reports';
 import { NotificationsModule } from './notifications';
+import { UploadModule } from './upload';
 import { configuration, validateEnv } from './config';
 import { TenantMiddleware } from './common/middleware';
 
@@ -41,6 +42,7 @@ import { TenantMiddleware } from './common/middleware';
     DashboardModule,
     ReportsModule,
     NotificationsModule,
+    UploadModule,
   ],
   controllers: [AppController],
   providers: [AppService],
