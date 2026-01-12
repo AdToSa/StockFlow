@@ -324,7 +324,9 @@ describe('StockMovementsController', () => {
       const result = await controller.findOne('movement-123');
 
       expect(result).toEqual(mockStockMovement);
-      expect(stockMovementsService.findOne).toHaveBeenCalledWith('movement-123');
+      expect(stockMovementsService.findOne).toHaveBeenCalledWith(
+        'movement-123',
+      );
     });
 
     it('should return movement with all relations', async () => {
@@ -844,18 +846,18 @@ describe('ProductMovementsController', () => {
       const error = new NotFoundException('Producto no encontrado');
       stockMovementsService.findByProduct.mockRejectedValue(error);
 
-      await expect(
-        controller.findByProduct('invalid-id', {}),
-      ).rejects.toThrow(error);
+      await expect(controller.findByProduct('invalid-id', {})).rejects.toThrow(
+        error,
+      );
     });
 
     it('should propagate service errors', async () => {
       const error = new Error('Database error');
       stockMovementsService.findByProduct.mockRejectedValue(error);
 
-      await expect(
-        controller.findByProduct('product-123', {}),
-      ).rejects.toThrow(error);
+      await expect(controller.findByProduct('product-123', {})).rejects.toThrow(
+        error,
+      );
     });
 
     it('should return empty array when no movements exist', async () => {

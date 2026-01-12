@@ -361,6 +361,55 @@ describe('DashboardService', () => {
         }),
       );
     });
+
+    it('should filter out products not found in database', async () => {
+      // groupBy returns products, but findMany doesn't return one of them
+      (prismaService.invoiceItem.groupBy as jest.Mock).mockResolvedValue([
+        { productId: 'product-1', _sum: { quantity: 100, total: 10000 } },
+        { productId: 'product-2', _sum: { quantity: 50, total: 5000 } },
+        { productId: 'product-deleted', _sum: { quantity: 25, total: 2500 } },
+      ]);
+
+      // Only return 2 of the 3 products (product-deleted not found)
+      (prismaService.product.findMany as jest.Mock).mockResolvedValue([
+        { id: 'product-1', name: 'Product One', sku: 'SKU-001' },
+        { id: 'product-2', name: 'Product Two', sku: 'SKU-002' },
+      ]);
+
+      const result = await service.getTopSellingProducts(mockTenantId);
+
+      // Should only return 2 products, filtering out the deleted one
+      expect(result).toHaveLength(2);
+      expect(result.find((p) => p.id === 'product-deleted')).toBeUndefined();
+    });
+
+    it('should handle null quantity in sum', async () => {
+      (prismaService.invoiceItem.groupBy as jest.Mock).mockResolvedValue([
+        { productId: 'product-1', _sum: { quantity: null, total: 10000 } },
+      ]);
+
+      (prismaService.product.findMany as jest.Mock).mockResolvedValue([
+        { id: 'product-1', name: 'Product One', sku: 'SKU-001' },
+      ]);
+
+      const result = await service.getTopSellingProducts(mockTenantId);
+
+      expect(result[0].quantitySold).toBe(0);
+    });
+
+    it('should handle null total in sum', async () => {
+      (prismaService.invoiceItem.groupBy as jest.Mock).mockResolvedValue([
+        { productId: 'product-1', _sum: { quantity: 100, total: null } },
+      ]);
+
+      (prismaService.product.findMany as jest.Mock).mockResolvedValue([
+        { id: 'product-1', name: 'Product One', sku: 'SKU-001' },
+      ]);
+
+      const result = await service.getTopSellingProducts(mockTenantId);
+
+      expect(result[0].revenue).toBe(0);
+    });
   });
 
   describe('getInvoiceMetrics', () => {
@@ -618,6 +667,55 @@ describe('DashboardService', () => {
         }),
       );
     });
+
+    it('should filter out products not found in database', async () => {
+      // groupBy returns products, but findMany doesn't return one of them
+      (prismaService.invoiceItem.groupBy as jest.Mock).mockResolvedValue([
+        { productId: 'product-1', _sum: { quantity: 100, total: 10000 } },
+        { productId: 'product-2', _sum: { quantity: 50, total: 5000 } },
+        { productId: 'product-deleted', _sum: { quantity: 25, total: 2500 } },
+      ]);
+
+      // Only return 2 of the 3 products (product-deleted not found)
+      (prismaService.product.findMany as jest.Mock).mockResolvedValue([
+        { id: 'product-1', name: 'Product One' },
+        { id: 'product-2', name: 'Product Two' },
+      ]);
+
+      const result = await service.getTopProductsChart(mockTenantId);
+
+      // Should only return 2 products, filtering out the deleted one
+      expect(result).toHaveLength(2);
+      expect(result.find((p) => p.id === 'product-deleted')).toBeUndefined();
+    });
+
+    it('should handle null quantity in sum for chart', async () => {
+      (prismaService.invoiceItem.groupBy as jest.Mock).mockResolvedValue([
+        { productId: 'product-1', _sum: { quantity: null, total: 10000 } },
+      ]);
+
+      (prismaService.product.findMany as jest.Mock).mockResolvedValue([
+        { id: 'product-1', name: 'Product One' },
+      ]);
+
+      const result = await service.getTopProductsChart(mockTenantId);
+
+      expect(result[0].quantity).toBe(0);
+    });
+
+    it('should handle null total in sum for chart', async () => {
+      (prismaService.invoiceItem.groupBy as jest.Mock).mockResolvedValue([
+        { productId: 'product-1', _sum: { quantity: 100, total: null } },
+      ]);
+
+      (prismaService.product.findMany as jest.Mock).mockResolvedValue([
+        { id: 'product-1', name: 'Product One' },
+      ]);
+
+      const result = await service.getTopProductsChart(mockTenantId);
+
+      expect(result[0].revenue).toBe(0);
+    });
   });
 
   describe('getSalesByCategory', () => {
@@ -735,6 +833,140 @@ describe('DashboardService', () => {
 
       expect(result[0].categoryName).toBe('Large');
       expect(result[1].categoryName).toBe('Small');
+    });
+
+    it('should aggregate multiple items from the same category', async () => {
+      (prismaService.invoice.aggregate as jest.Mock).mockResolvedValue({
+        _sum: { total: 10000 },
+      });
+
+      // Multiple items from the SAME category to cover line 627: existing.amount += itemTotal
+      (prismaService.invoiceItem.findMany as jest.Mock).mockResolvedValue([
+        {
+          total: 3000,
+          product: {
+            categoryId: 'category-1',
+            category: { id: 'category-1', name: 'Electronics' },
+          },
+        },
+        {
+          total: 2000,
+          product: {
+            categoryId: 'category-1',
+            category: { id: 'category-1', name: 'Electronics' },
+          },
+        },
+        {
+          total: 5000,
+          product: {
+            categoryId: 'category-1',
+            category: { id: 'category-1', name: 'Electronics' },
+          },
+        },
+      ]);
+
+      const result = await service.getSalesByCategory(mockTenantId);
+
+      // All three items should be aggregated into a single category entry
+      expect(result).toHaveLength(1);
+      expect(result[0].categoryId).toBe('category-1');
+      expect(result[0].categoryName).toBe('Electronics');
+      expect(result[0].amount).toBe(10000); // 3000 + 2000 + 5000
+      expect(result[0].percentage).toBe(100);
+    });
+
+    it('should aggregate items from same category while keeping different categories separate', async () => {
+      (prismaService.invoice.aggregate as jest.Mock).mockResolvedValue({
+        _sum: { total: 15000 },
+      });
+
+      // Mix of items from same category and different categories
+      (prismaService.invoiceItem.findMany as jest.Mock).mockResolvedValue([
+        {
+          total: 3000,
+          product: {
+            categoryId: 'category-1',
+            category: { id: 'category-1', name: 'Electronics' },
+          },
+        },
+        {
+          total: 2000,
+          product: {
+            categoryId: 'category-2',
+            category: { id: 'category-2', name: 'Clothing' },
+          },
+        },
+        {
+          total: 5000,
+          product: {
+            categoryId: 'category-1',
+            category: { id: 'category-1', name: 'Electronics' },
+          },
+        },
+        {
+          total: 5000,
+          product: {
+            categoryId: 'category-2',
+            category: { id: 'category-2', name: 'Clothing' },
+          },
+        },
+      ]);
+
+      const result = await service.getSalesByCategory(mockTenantId);
+
+      // Should have 2 categories
+      expect(result).toHaveLength(2);
+
+      // Electronics: 3000 + 5000 = 8000
+      const electronics = result.find((r) => r.categoryId === 'category-1');
+      expect(electronics).toBeDefined();
+      expect(electronics!.amount).toBe(8000);
+      expect(electronics!.percentage).toBeCloseTo(53.33, 1);
+
+      // Clothing: 2000 + 5000 = 7000
+      const clothing = result.find((r) => r.categoryId === 'category-2');
+      expect(clothing).toBeDefined();
+      expect(clothing!.amount).toBe(7000);
+      expect(clothing!.percentage).toBeCloseTo(46.67, 1);
+    });
+
+    it('should aggregate multiple uncategorized items', async () => {
+      (prismaService.invoice.aggregate as jest.Mock).mockResolvedValue({
+        _sum: { total: 6000 },
+      });
+
+      // Multiple items without category to test aggregation with null categoryId
+      (prismaService.invoiceItem.findMany as jest.Mock).mockResolvedValue([
+        {
+          total: 1000,
+          product: {
+            categoryId: null,
+            category: null,
+          },
+        },
+        {
+          total: 2000,
+          product: {
+            categoryId: null,
+            category: null,
+          },
+        },
+        {
+          total: 3000,
+          product: {
+            categoryId: null,
+            category: null,
+          },
+        },
+      ]);
+
+      const result = await service.getSalesByCategory(mockTenantId);
+
+      expect(result).toHaveLength(1);
+      expect(result[0].categoryId).toBeNull();
+      expect(result[0].categoryName).toBe('Sin categoria');
+      expect(result[0].amount).toBe(6000); // 1000 + 2000 + 3000
+      expect(result[0].percentage).toBe(100);
     });
   });
 

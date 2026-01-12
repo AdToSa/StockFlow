@@ -3,17 +3,37 @@
   "typescript.enablePromptUseWorkspaceTsdk": true,
   "typescript.preferences.includePackageJsonAutoImports": "off",
   "typescript.tsserver.experimental.enableProjectDiagnostics": false,
+  "typescript.disableAutomaticTypeAcquisition": true,
   "files.exclude": {
     "**/node_modules": true,
-    "**/.git": true
+    "**/.git": true,
+    "**/dist": true,
+    "**/build": true,
+    "**/__name__*": true,
+    "**/__name@*": true
   },
   "search.exclude": {
     "**/node_modules": true,
     "**/dist": true,
-    "**/build": true
+    "**/build": true,
+    "**/__name__*": true,
+    "**/__name@*": true
   },
-  "typescript.disableAutomaticTypeAcquisition": true,
   "files.watcherExclude": {
-    "**/node_modules/**": true
+    "**/node_modules/**": true,
+    "**/dist/**": true,
+    "**/build/**": true,
+    "**/__name__*": true,
+    "**/__name@*": true
+  },
+  "typescript.tsserver.watchOptions": {
+    "excludeDirectories": ["**/node_modules", "**/dist", "**/build"]
+  },
+  "files.associations": {
+    "**/node_modules/**/*.ts": "plaintext",
+    "**/__name__*": "plaintext",
+    "**/__name@*": "plaintext",
+    "**/@nestjs/schematics/**/*.ts": "plaintext",
+    "**/@angular-devkit/schematics/**/*.ts": "plaintext"
   }
 }

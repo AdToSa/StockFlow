@@ -195,7 +195,9 @@ describe('PaymentsController', () => {
       expect(logSpy).toHaveBeenCalledWith(
         'Listing payments - page: 1, limit: 10',
       );
-      expect(paymentsService.findAll).toHaveBeenCalledWith(filtersWithUndefined);
+      expect(paymentsService.findAll).toHaveBeenCalledWith(
+        filtersWithUndefined,
+      );
     });
 
     it('should use page 0 when explicitly set (not trigger default)', async () => {

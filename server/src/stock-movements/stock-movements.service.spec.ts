@@ -1,9 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import {
-  NotFoundException,
-  BadRequestException,
-  Logger,
-} from '@nestjs/common';
+import { NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { MovementType } from '@prisma/client';
 import { StockMovementsService } from './stock-movements.service';
 import { PrismaService } from '../prisma';
@@ -1029,7 +1025,9 @@ describe('StockMovementsService', () => {
             },
             stockMovement: {
               create: jest.fn().mockImplementation((data: unknown) => {
-                movementCreateData = data as { data: { userId: string | null } };
+                movementCreateData = data as {
+                  data: { userId: string | null };
+                };
                 return mockStockMovement;
               }),
             },

@@ -12,6 +12,11 @@
   "exclude": [
     "**/node_modules/**",
     "**/dist/**",
-    "**/build/**"
+    "**/build/**",
+    "**/__name__*",
+    "**/__name@*",
+    "**/files/**/*.ts",
+    "**/@nestjs/schematics/**",
+    "**/@angular-devkit/**"
   ]
 }
