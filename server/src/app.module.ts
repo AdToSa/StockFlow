@@ -18,6 +18,8 @@ import { DashboardModule } from './dashboard';
 import { ReportsModule } from './reports';
 import { NotificationsModule } from './notifications';
 import { UploadModule } from './upload';
+import { SubscriptionsModule } from './subscriptions';
+import { AuditLogsModule } from './audit-logs';
 import { configuration, validateEnv } from './config';
 import { TenantMiddleware } from './common/middleware';
 
@@ -45,6 +47,8 @@ import { TenantMiddleware } from './common/middleware';
     ReportsModule,
     NotificationsModule,
     UploadModule,
+    SubscriptionsModule,
+    AuditLogsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

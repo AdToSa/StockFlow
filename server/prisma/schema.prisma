@@ -99,6 +99,16 @@ enum PaymentMethod {
   OTHER
 }
 
+enum AuditAction {
+  CREATE
+  UPDATE
+  DELETE
+  LOGIN
+  LOGOUT
+  EXPORT
+  IMPORT
+}
+
 // ============================================================================
 // MODELS
 // ============================================================================
@@ -128,6 +138,7 @@ model Tenant {
   categories Category[]
   movements  StockMovement[]
   payments   Payment[]
+  auditLogs  AuditLog[]
 
   @@map("tenants")
 }
@@ -153,6 +164,7 @@ model User {
   tenant    Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   invoices  Invoice[]
   movements StockMovement[]
+  auditLogs AuditLog[]
 
   @@unique([tenantId, email])
   @@index([tenantId])
@@ -370,4 +382,29 @@ model Payment {
   @@index([tenantId])
   @@index([invoiceId])
   @@map("payments")
+}
+
+model AuditLog {
+  id         String      @id @default(cuid())
+  tenantId   String      @map("tenant_id")
+  userId     String?     @map("user_id")
+  action     AuditAction
+  entityType String      @map("entity_type")
+  entityId   String      @map("entity_id")
+  oldValues  Json?       @map("old_values")
+  newValues  Json?       @map("new_values")
+  ipAddress  String?     @map("ip_address")
+  userAgent  String?     @map("user_agent")
+  metadata   Json?
+  createdAt  DateTime    @default(now()) @map("created_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user   User?  @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId])
+  @@index([userId])
+  @@index([entityType, entityId])
+  @@index([createdAt])
+  @@index([action])
+  @@map("audit_logs")
 }
