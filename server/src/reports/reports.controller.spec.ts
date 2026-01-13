@@ -509,9 +509,11 @@ describe('ReportsController', () => {
 
   describe('guard application', () => {
     it('should have JwtAuthGuard applied at class level', () => {
-      const guards = Reflect.getMetadata('__guards__', ReportsController);
+      const guards = Reflect.getMetadata('__guards__', ReportsController) as
+        | unknown[]
+        | undefined;
       expect(guards).toBeDefined();
-      expect(guards.length).toBeGreaterThan(0);
+      expect(guards?.length).toBeGreaterThan(0);
     });
   });
 

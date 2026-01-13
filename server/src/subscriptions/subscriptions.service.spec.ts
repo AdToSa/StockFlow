@@ -769,13 +769,15 @@ describe('SubscriptionsService', () => {
 
     beforeEach(() => {
       mockPrismaTenant.findFirst.mockResolvedValue(mockTenantWithStripe);
-      mockExecuteInTransaction.mockImplementation(async (fn) => {
-        return fn({
-          tenant: {
-            update: jest.fn(),
-          },
-        });
-      });
+      mockExecuteInTransaction.mockImplementation(
+        (fn: (prisma: { tenant: { update: jest.Mock } }) => unknown) => {
+          return fn({
+            tenant: {
+              update: jest.fn(),
+            },
+          });
+        },
+      );
     });
 
     describe('checkout.session.completed', () => {

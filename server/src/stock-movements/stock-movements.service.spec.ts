@@ -349,8 +349,9 @@ describe('StockMovementsService', () => {
       it('should not include createdAt filter when neither fromDate nor toDate provided', async () => {
         await service.findAll({});
 
-        const callArg = (prismaService.stockMovement.findMany as jest.Mock).mock
-          .calls[0][0];
+        const calls = (prismaService.stockMovement.findMany as jest.Mock).mock
+          .calls as Array<[{ where: { createdAt?: unknown } }]>;
+        const callArg = calls[0][0];
         expect(callArg.where.createdAt).toBeUndefined();
       });
     });
