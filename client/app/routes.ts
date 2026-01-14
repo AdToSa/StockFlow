@@ -11,9 +11,14 @@ export default [
   // Protected app routes with layout
   layout("routes/_app.tsx", [
     route("dashboard", "routes/_app.dashboard.tsx"),
+
+    // Products module
+    route("products", "routes/_app.products.tsx"),
+    route("products/new", "routes/_app.products.new.tsx"),
+    route("products/:id", "routes/_app.products.$id.tsx"),
+    route("products/:id/edit", "routes/_app.products.$id.edit.tsx"),
+
     // Future routes will be added here:
-    // route("products", "routes/_app.products.tsx"),
-    // route("products/:id", "routes/_app.products.$id.tsx"),
     // route("categories", "routes/_app.categories.tsx"),
     // route("warehouses", "routes/_app.warehouses.tsx"),
     // route("customers", "routes/_app.customers.tsx"),
