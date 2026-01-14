@@ -1,5 +1,9 @@
 # StockFlow Backend
 
+[![CI](https://github.com/YOUR_USERNAME/StockFlow/actions/workflows/ci.yml/badge.svg)](https://github.com/YOUR_USERNAME/StockFlow/actions/workflows/ci.yml)
+[![Deploy](https://github.com/YOUR_USERNAME/StockFlow/actions/workflows/deploy.yml/badge.svg)](https://github.com/YOUR_USERNAME/StockFlow/actions/workflows/deploy.yml)
+[![codecov](https://codecov.io/gh/YOUR_USERNAME/StockFlow/branch/main/graph/badge.svg)](https://codecov.io/gh/YOUR_USERNAME/StockFlow)
+
 Multi-Tenant SaaS Inventory and Invoicing System built with NestJS.
 
 ## Features
@@ -202,6 +206,52 @@ npx jest path/to/file.spec.ts
 Current test coverage: **98%+** across all modules.
 
 For detailed testing documentation, see [docs/TESTING.md](docs/TESTING.md).
+
+## CI/CD Pipeline
+
+This project uses GitHub Actions for continuous integration and deployment.
+
+### Workflows
+
+| Workflow | Trigger | Description |
+|----------|---------|-------------|
+| CI | Push to main/develop, PRs to main | Linting, testing, building |
+| Deploy | Push to main | Build Docker image, deploy to staging/production |
+| PR Check | Pull requests | Validation, security scanning, type checking |
+| Release | Push to main | Automated releases with changelogs |
+
+### Required Secrets
+
+Configure these secrets in your GitHub repository settings:
+
+| Secret | Description |
+|--------|-------------|
+| `CODECOV_TOKEN` | Codecov upload token for coverage reports |
+| `STAGING_SSH_USER` | SSH username for staging server (if using SSH deployment) |
+| `STAGING_SSH_HOST` | SSH host for staging server |
+| `PRODUCTION_SSH_USER` | SSH username for production server |
+| `PRODUCTION_SSH_HOST` | SSH host for production server |
+
+### Environment Variables
+
+Configure these variables in GitHub environment settings:
+
+| Variable | Environment | Description |
+|----------|-------------|-------------|
+| `STAGING_URL` | staging | Staging environment URL |
+| `PRODUCTION_URL` | production | Production environment URL |
+
+### Running Locally
+
+To validate workflows locally before pushing:
+
+```bash
+# Install act (GitHub Actions local runner)
+brew install act
+
+# Run CI workflow
+act -j test
+```
 
 ## Deployment
 
