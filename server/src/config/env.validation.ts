@@ -214,6 +214,56 @@ export class EnvironmentVariables {
   @IsString()
   @IsOptional()
   STRIPE_PRICE_ENTERPRISE?: string;
+
+  // ============================================================================
+  // REDIS CACHE CONFIGURATION (Optional - for distributed caching)
+  // ============================================================================
+
+  /**
+   * Redis server hostname.
+   * If not set, in-memory cache will be used (suitable for development).
+   * Example: localhost, redis.example.com, redis
+   */
+  @IsString()
+  @IsOptional()
+  REDIS_HOST?: string;
+
+  /**
+   * Redis server port.
+   * Default: 6379
+   */
+  @IsNumber()
+  @Min(1)
+  @Max(65535)
+  @IsOptional()
+  REDIS_PORT?: number = 6379;
+
+  /**
+   * Redis authentication password.
+   * Required if Redis server has authentication enabled.
+   */
+  @IsString()
+  @IsOptional()
+  REDIS_PASSWORD?: string;
+
+  /**
+   * Redis database index (0-15).
+   * Default: 0
+   */
+  @IsNumber()
+  @Min(0)
+  @Max(15)
+  @IsOptional()
+  REDIS_DB?: number = 0;
+
+  /**
+   * Default cache TTL in seconds.
+   * Default: 300 (5 minutes)
+   */
+  @IsNumber()
+  @Min(1)
+  @IsOptional()
+  CACHE_TTL?: number = 300;
 }
 
 /**

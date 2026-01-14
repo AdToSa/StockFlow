@@ -8,6 +8,7 @@ import {
 import { Product, ProductStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma';
 import { TenantContextService } from '../common';
+import { CacheService, CACHE_KEYS, CACHE_TTL } from '../cache';
 import {
   CreateProductDto,
   UpdateProductDto,
@@ -68,6 +69,7 @@ export class ProductsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly tenantContext: TenantContextService,
+    private readonly cache: CacheService,
   ) {}
 
   /**
@@ -204,6 +206,7 @@ export class ProductsService {
 
   /**
    * Finds a single product by ID within the current tenant.
+   * Results are cached for improved performance.
    *
    * @param id - Product ID
    * @returns Product data
@@ -211,8 +214,15 @@ export class ProductsService {
    */
   async findOne(id: string): Promise<ProductResponse> {
     const tenantId = this.tenantContext.requireTenantId();
+    const cacheKey = this.cache.generateKey(CACHE_KEYS.PRODUCT, tenantId, id);
 
     this.logger.debug(`Finding product ${id} in tenant ${tenantId}`);
+
+    // Try to get from cache first
+    const cached = await this.cache.get<ProductResponse>(cacheKey);
+    if (cached) {
+      return cached;
+    }
 
     const product = await this.prisma.product.findFirst({
       where: { id, tenantId },
@@ -223,7 +233,12 @@ export class ProductsService {
       throw new NotFoundException(`Product with ID ${id} not found`);
     }
 
-    return this.mapToProductResponse(product);
+    const response = this.mapToProductResponse(product);
+
+    // Cache the result
+    await this.cache.set(cacheKey, response, CACHE_TTL.PRODUCT);
+
+    return response;
   }
 
   /**
@@ -316,6 +331,9 @@ export class ProductsService {
     });
 
     this.logger.log(`Product created: ${product.name} (${product.id})`);
+
+    // Invalidate product list cache and dashboard cache
+    await this.invalidateProductCaches(tenantId);
 
     return this.mapToProductResponse(product);
   }
@@ -460,6 +478,9 @@ export class ProductsService {
       `Product updated: ${updatedProduct.name} (${updatedProduct.id})`,
     );
 
+    // Invalidate caches for this product and related lists
+    await this.invalidateProductCaches(tenantId, id);
+
     return this.mapToProductResponse(updatedProduct);
   }
 
@@ -503,6 +524,9 @@ export class ProductsService {
     await this.prisma.product.delete({ where: { id } });
 
     this.logger.log(`Product deleted: ${product.name} (${product.id})`);
+
+    // Invalidate caches for this product and related lists
+    await this.invalidateProductCaches(tenantId, id);
   }
 
   /**
@@ -592,6 +616,9 @@ export class ProductsService {
       },
     });
 
+    // Invalidate caches for this product and related lists
+    await this.invalidateProductCaches(tenantId, id);
+
     return this.mapToProductResponse(updatedProduct);
   }
 
@@ -659,5 +686,33 @@ export class ProductsService {
     const paginatedProducts = lowStockProducts.slice(skip, skip + limit);
 
     return this.buildPaginatedResponse(paginatedProducts, total, page, limit);
+  }
+
+  /**
+   * Invalidates product-related caches after a mutation.
+   * Clears both individual product cache and list caches.
+   *
+   * @param tenantId - Tenant identifier
+   * @param productId - Optional specific product ID to invalidate
+   */
+  private async invalidateProductCaches(
+    tenantId: string,
+    productId?: string,
+  ): Promise<void> {
+    // Invalidate product list caches (includes all query variations)
+    await this.cache.invalidate(CACHE_KEYS.PRODUCTS, tenantId);
+
+    // Invalidate individual product cache if provided
+    if (productId) {
+      const productKey = this.cache.generateKey(
+        CACHE_KEYS.PRODUCT,
+        tenantId,
+        productId,
+      );
+      await this.cache.del(productKey);
+    }
+
+    // Invalidate dashboard cache as it depends on product data
+    await this.cache.invalidate(CACHE_KEYS.DASHBOARD, tenantId);
   }
 }

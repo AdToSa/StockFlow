@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { InvoiceStatus } from '@prisma/client';
 import { PrismaService } from '../prisma';
 import { TenantContextService } from '../common';
+import { CacheService, CACHE_KEYS, CACHE_TTL } from '../cache';
 
 /**
  * Sales metrics for the dashboard
@@ -157,17 +158,26 @@ export class DashboardService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly tenantContext: TenantContextService,
+    private readonly cache: CacheService,
   ) {}
 
   /**
    * Gets all dashboard metrics for the current tenant.
+   * Results are cached to improve performance.
    *
    * @returns Complete dashboard data with sales, products, invoices, customers, and charts
    */
   async getDashboard(): Promise<DashboardResponse> {
     const tenantId = this.tenantContext.requireTenantId();
+    const cacheKey = this.cache.generateKey(CACHE_KEYS.DASHBOARD, tenantId);
 
     this.logger.debug(`Fetching dashboard metrics for tenant ${tenantId}`);
+
+    // Try to get from cache first
+    const cached = await this.cache.get<DashboardResponse>(cacheKey);
+    if (cached) {
+      return cached;
+    }
 
     // Execute all metric queries in parallel for performance
     const [sales, products, invoices, customers, charts] = await Promise.all([
@@ -180,13 +190,18 @@ export class DashboardService {
 
     this.logger.log(`Dashboard metrics fetched for tenant ${tenantId}`);
 
-    return {
+    const response = {
       sales,
       products,
       invoices,
       customers,
       charts,
     };
+
+    // Cache the result with shorter TTL since dashboard data changes frequently
+    await this.cache.set(cacheKey, response, CACHE_TTL.DASHBOARD);
+
+    return response;
   }
 
   /**

@@ -67,6 +67,17 @@ export interface StripeConfig {
 }
 
 /**
+ * Redis cache configuration interface
+ */
+export interface RedisConfig {
+  host: string | undefined;
+  port: number;
+  password: string | undefined;
+  db: number;
+  ttl: number;
+}
+
+/**
  * Complete application configuration interface
  */
 export interface Configuration {
@@ -77,6 +88,7 @@ export interface Configuration {
   email: EmailConfig;
   arcjet: ArcjetConfig;
   stripe: StripeConfig;
+  redis: RedisConfig;
 }
 
 /**
@@ -169,6 +181,21 @@ export const stripeConfig = registerAs(
 );
 
 /**
+ * Redis configuration factory
+ * Provides distributed caching configuration
+ */
+export const redisConfig = registerAs(
+  'redis',
+  (): RedisConfig => ({
+    host: process.env.REDIS_HOST,
+    port: parseInt(process.env.REDIS_PORT || '6379', 10),
+    password: process.env.REDIS_PASSWORD,
+    db: parseInt(process.env.REDIS_DB || '0', 10),
+    ttl: parseInt(process.env.CACHE_TTL || '300', 10),
+  }),
+);
+
+/**
  * Combined configuration factory function
  * Returns the complete configuration object
  */
@@ -211,5 +238,12 @@ export default (): Configuration => ({
     priceBasic: process.env.STRIPE_PRICE_BASIC,
     pricePro: process.env.STRIPE_PRICE_PRO,
     priceEnterprise: process.env.STRIPE_PRICE_ENTERPRISE,
+  },
+  redis: {
+    host: process.env.REDIS_HOST,
+    port: parseInt(process.env.REDIS_PORT || '6379', 10),
+    password: process.env.REDIS_PASSWORD,
+    db: parseInt(process.env.REDIS_DB || '0', 10),
+    ttl: parseInt(process.env.CACHE_TTL || '300', 10),
   },
 });
