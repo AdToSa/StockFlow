@@ -90,6 +90,27 @@ vi.mock('framer-motion', () => ({
     span: React.forwardRef(({ children, ...props }: React.ComponentProps<'span'>, ref: React.Ref<HTMLSpanElement>) =>
       React.createElement('span', { ...props, ref }, children)
     ),
+    aside: React.forwardRef(({ children, ...props }: React.ComponentProps<'aside'>, ref: React.Ref<HTMLElement>) =>
+      React.createElement('aside', { ...props, ref }, children)
+    ),
+    nav: React.forwardRef(({ children, ...props }: React.ComponentProps<'nav'>, ref: React.Ref<HTMLElement>) =>
+      React.createElement('nav', { ...props, ref }, children)
+    ),
+    ul: React.forwardRef(({ children, ...props }: React.ComponentProps<'ul'>, ref: React.Ref<HTMLUListElement>) =>
+      React.createElement('ul', { ...props, ref }, children)
+    ),
+    li: React.forwardRef(({ children, ...props }: React.ComponentProps<'li'>, ref: React.Ref<HTMLLIElement>) =>
+      React.createElement('li', { ...props, ref }, children)
+    ),
+    header: React.forwardRef(({ children, ...props }: React.ComponentProps<'header'>, ref: React.Ref<HTMLElement>) =>
+      React.createElement('header', { ...props, ref }, children)
+    ),
+    p: React.forwardRef(({ children, ...props }: React.ComponentProps<'p'>, ref: React.Ref<HTMLParagraphElement>) =>
+      React.createElement('p', { ...props, ref }, children)
+    ),
+    img: React.forwardRef((props: React.ComponentProps<'img'>, ref: React.Ref<HTMLImageElement>) =>
+      React.createElement('img', { ...props, ref })
+    ),
   },
   AnimatePresence: ({ children }: { children: React.ReactNode }) => children,
 }));
