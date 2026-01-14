@@ -1,0 +1,262 @@
+import { NavLink, useLocation } from 'react-router';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+  LayoutDashboard,
+  Package,
+  FolderTree,
+  Warehouse,
+  Users,
+  FileText,
+  CreditCard,
+  BarChart3,
+  Settings,
+  LogOut,
+  ChevronLeft,
+  ChevronRight,
+} from 'lucide-react';
+import { cn, getInitials } from '~/lib/utils';
+import { useUIStore } from '~/stores/ui.store';
+import { useAuthStore } from '~/stores/auth.store';
+import { useAuth } from '~/hooks/useAuth';
+import { Button } from '~/components/ui/Button';
+
+interface NavItem {
+  name: string;
+  href: string;
+  icon: React.ComponentType<{ className?: string }>;
+}
+
+const navItems: NavItem[] = [
+  { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+  { name: 'Productos', href: '/products', icon: Package },
+  { name: 'Categorias', href: '/categories', icon: FolderTree },
+  { name: 'Bodegas', href: '/warehouses', icon: Warehouse },
+  { name: 'Clientes', href: '/customers', icon: Users },
+  { name: 'Facturas', href: '/invoices', icon: FileText },
+  { name: 'Pagos', href: '/payments', icon: CreditCard },
+  { name: 'Reportes', href: '/reports', icon: BarChart3 },
+  { name: 'Configuracion', href: '/settings', icon: Settings },
+];
+
+const sidebarVariants = {
+  expanded: {
+    width: 280,
+    transition: { duration: 0.3, ease: 'easeInOut' as const },
+  },
+  collapsed: {
+    width: 80,
+    transition: { duration: 0.3, ease: 'easeInOut' as const },
+  },
+};
+
+const itemVariants = {
+  expanded: {
+    opacity: 1,
+    x: 0,
+    display: 'block',
+    transition: { duration: 0.2, delay: 0.1 },
+  },
+  collapsed: {
+    opacity: 0,
+    x: -10,
+    transitionEnd: { display: 'none' },
+    transition: { duration: 0.1 },
+  },
+};
+
+export function Sidebar() {
+  const location = useLocation();
+  const { sidebarCollapsed, toggleSidebarCollapse, sidebarOpen } = useUIStore();
+  const { user, tenant } = useAuthStore();
+  const { logout, isLoggingOut } = useAuth();
+
+  const userName = user
+    ? `${user.firstName} ${user.lastName}`
+    : 'Usuario';
+  const userEmail = user?.email || 'usuario@email.com';
+  const userInitials = getInitials(userName);
+  const tenantName = tenant?.name || 'Mi Empresa';
+
+  return (
+    <AnimatePresence mode="wait">
+      {sidebarOpen && (
+        <motion.aside
+          initial={{ x: -280 }}
+          animate={{ x: 0 }}
+          exit={{ x: -280 }}
+          transition={{ duration: 0.3, ease: 'easeInOut' }}
+          className="fixed inset-y-0 left-0 z-40 flex flex-col lg:relative"
+        >
+          <motion.div
+            variants={sidebarVariants}
+            initial={false}
+            animate={sidebarCollapsed ? 'collapsed' : 'expanded'}
+            className={cn(
+              'flex h-full flex-col bg-white border-r border-neutral-200',
+              'dark:bg-neutral-900 dark:border-neutral-800'
+            )}
+          >
+            {/* Header */}
+            <div className="flex h-16 items-center justify-between px-4 border-b border-neutral-100 dark:border-neutral-800">
+              <motion.div
+                variants={itemVariants}
+                animate={sidebarCollapsed ? 'collapsed' : 'expanded'}
+                className="flex items-center gap-3"
+              >
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary-600 text-white flex-shrink-0">
+                  <svg className="h-6 w-6" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M20 7h-4V4c0-1.1-.9-2-2-2h-4c-1.1 0-2 .9-2 2v3H4c-1.1 0-2 .9-2 2v11c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V9c0-1.1-.9-2-2-2zM10 4h4v3h-4V4zm10 16H4V9h16v11z" />
+                    <path d="M13 12h-2v3H8v2h3v3h2v-3h3v-2h-3z" />
+                  </svg>
+                </div>
+                <span className="text-lg font-bold font-display text-neutral-900 dark:text-white whitespace-nowrap">
+                  StockFlow
+                </span>
+              </motion.div>
+
+              {/* Collapse toggle */}
+              <button
+                onClick={toggleSidebarCollapse}
+                className={cn(
+                  'hidden lg:flex h-8 w-8 items-center justify-center rounded-lg',
+                  'text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100',
+                  'dark:hover:text-neutral-300 dark:hover:bg-neutral-800',
+                  'transition-colors'
+                )}
+                title={sidebarCollapsed ? 'Expandir' : 'Colapsar'}
+              >
+                {sidebarCollapsed ? (
+                  <ChevronRight className="h-5 w-5" />
+                ) : (
+                  <ChevronLeft className="h-5 w-5" />
+                )}
+              </button>
+            </div>
+
+            {/* Tenant info */}
+            <motion.div
+              variants={itemVariants}
+              animate={sidebarCollapsed ? 'collapsed' : 'expanded'}
+              className="px-4 py-3 border-b border-neutral-100 dark:border-neutral-800"
+            >
+              <p className="text-xs font-medium text-neutral-400 uppercase tracking-wider">
+                Empresa
+              </p>
+              <p className="text-sm font-semibold text-neutral-900 dark:text-white truncate">
+                {tenantName}
+              </p>
+            </motion.div>
+
+            {/* Navigation */}
+            <nav className="flex-1 overflow-y-auto py-4 px-3">
+              <ul className="space-y-1">
+                {navItems.map((item) => {
+                  const isActive = location.pathname === item.href ||
+                    location.pathname.startsWith(`${item.href}/`);
+                  const Icon = item.icon;
+
+                  return (
+                    <li key={item.href}>
+                      <NavLink
+                        to={item.href}
+                        className={({ isActive: navLinkActive }) =>
+                          cn(
+                            'group flex items-center gap-3 px-3 py-2.5 rounded-xl',
+                            'transition-all duration-200',
+                            isActive || navLinkActive
+                              ? 'bg-primary-50 text-primary-700 dark:bg-primary-900/20 dark:text-primary-400'
+                              : 'text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900 dark:text-neutral-400 dark:hover:bg-neutral-800 dark:hover:text-white'
+                          )
+                        }
+                        title={sidebarCollapsed ? item.name : undefined}
+                      >
+                        <Icon
+                          className={cn(
+                            'h-5 w-5 flex-shrink-0 transition-colors',
+                            isActive
+                              ? 'text-primary-600 dark:text-primary-400'
+                              : 'text-neutral-400 group-hover:text-neutral-600 dark:group-hover:text-neutral-300'
+                          )}
+                        />
+                        <motion.span
+                          variants={itemVariants}
+                          animate={sidebarCollapsed ? 'collapsed' : 'expanded'}
+                          className="text-sm font-medium whitespace-nowrap"
+                        >
+                          {item.name}
+                        </motion.span>
+                        {isActive && (
+                          <motion.div
+                            layoutId="activeIndicator"
+                            className="absolute right-0 h-8 w-1 rounded-l-full bg-primary-600"
+                            initial={false}
+                            transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+                          />
+                        )}
+                      </NavLink>
+                    </li>
+                  );
+                })}
+              </ul>
+            </nav>
+
+            {/* User section */}
+            <div className="border-t border-neutral-100 dark:border-neutral-800 p-4">
+              <div className={cn(
+                'flex items-center gap-3',
+                sidebarCollapsed ? 'justify-center' : ''
+              )}>
+                {/* Avatar */}
+                <div className="relative flex-shrink-0">
+                  {user?.avatarUrl ? (
+                    <img
+                      src={user.avatarUrl}
+                      alt={userName}
+                      className="h-10 w-10 rounded-full object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary-100 text-primary-700 dark:bg-primary-900/30 dark:text-primary-400 font-medium text-sm">
+                      {userInitials}
+                    </div>
+                  )}
+                  <span className="absolute bottom-0 right-0 block h-2.5 w-2.5 rounded-full bg-success-500 ring-2 ring-white dark:ring-neutral-900" />
+                </div>
+
+                {/* User info */}
+                <motion.div
+                  variants={itemVariants}
+                  animate={sidebarCollapsed ? 'collapsed' : 'expanded'}
+                  className="flex-1 min-w-0"
+                >
+                  <p className="text-sm font-medium text-neutral-900 dark:text-white truncate">
+                    {userName}
+                  </p>
+                  <p className="text-xs text-neutral-500 dark:text-neutral-400 truncate">
+                    {userEmail}
+                  </p>
+                </motion.div>
+
+                {/* Logout button */}
+                <motion.div
+                  variants={itemVariants}
+                  animate={sidebarCollapsed ? 'collapsed' : 'expanded'}
+                >
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    onClick={() => logout()}
+                    disabled={isLoggingOut}
+                    title="Cerrar sesion"
+                    className="text-neutral-400 hover:text-error-600 dark:hover:text-error-400"
+                  >
+                    <LogOut className="h-4 w-4" />
+                  </Button>
+                </motion.div>
+              </div>
+            </div>
+          </motion.div>
+        </motion.aside>
+      )}
+    </AnimatePresence>
+  );
+}
