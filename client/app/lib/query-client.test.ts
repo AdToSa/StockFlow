@@ -184,7 +184,16 @@ describe('Query Keys', () => {
     });
 
     it('generates list key', () => {
-      expect(queryKeys.categories.list()).toEqual(['categories', 'list']);
+      expect(queryKeys.categories.list()).toEqual(['categories', 'list', undefined]);
+    });
+
+    it('generates list key with filters', () => {
+      const filters = { search: 'test', page: 1 };
+      expect(queryKeys.categories.list(filters)).toEqual(['categories', 'list', filters]);
+    });
+
+    it('generates detail key', () => {
+      expect(queryKeys.categories.detail('cat-123')).toEqual(['categories', 'cat-123']);
     });
   });
 
@@ -194,7 +203,12 @@ describe('Query Keys', () => {
     });
 
     it('generates list key', () => {
-      expect(queryKeys.warehouses.list()).toEqual(['warehouses', 'list']);
+      expect(queryKeys.warehouses.list()).toEqual(['warehouses', 'list', undefined]);
+    });
+
+    it('generates list key with filters', () => {
+      const filters = { city: 'Bogota', isActive: true };
+      expect(queryKeys.warehouses.list(filters)).toEqual(['warehouses', 'list', filters]);
     });
 
     it('generates detail key', () => {

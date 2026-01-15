@@ -80,9 +80,9 @@ const mockProduct: Product = {
   minStock: 10,
   maxStock: 100,
   categoryId: '1',
-  category: { id: '1', name: 'Electronics' },
+  category: { id: '1', name: 'Electronics', createdAt: '2024-01-01T00:00:00Z', updatedAt: '2024-01-01T00:00:00Z' },
   warehouseId: '1',
-  warehouse: { id: '1', name: 'Main Warehouse' },
+  warehouse: { id: '1', name: 'Main Warehouse', isActive: true, createdAt: '2024-01-01T00:00:00Z', updatedAt: '2024-01-01T00:00:00Z' },
   images: [],
   status: 'ACTIVE',
   createdAt: '2024-01-01T00:00:00Z',
@@ -112,13 +112,13 @@ const mockLowStockProducts: LowStockProduct[] = [
 ];
 
 const mockCategories: Category[] = [
-  { id: '1', name: 'Electronics' },
-  { id: '2', name: 'Accessories' },
+  { id: '1', name: 'Electronics', createdAt: '2024-01-01T00:00:00Z', updatedAt: '2024-01-01T00:00:00Z' },
+  { id: '2', name: 'Accessories', createdAt: '2024-01-01T00:00:00Z', updatedAt: '2024-01-01T00:00:00Z' },
 ];
 
 const mockWarehouses: Warehouse[] = [
-  { id: '1', name: 'Main Warehouse', isActive: true },
-  { id: '2', name: 'Secondary Warehouse', isActive: true },
+  { id: '1', name: 'Main Warehouse', isActive: true, createdAt: '2024-01-01T00:00:00Z', updatedAt: '2024-01-01T00:00:00Z' },
+  { id: '2', name: 'Secondary Warehouse', isActive: true, createdAt: '2024-01-01T00:00:00Z', updatedAt: '2024-01-01T00:00:00Z' },
 ];
 
 function createWrapper() {

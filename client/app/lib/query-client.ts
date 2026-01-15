@@ -58,13 +58,16 @@ export const queryKeys = {
   // Categories
   categories: {
     all: ['categories'] as const,
-    list: () => [...queryKeys.categories.all, 'list'] as const,
+    list: (filters?: Record<string, unknown>) =>
+      [...queryKeys.categories.all, 'list', filters] as const,
+    detail: (id: string) => [...queryKeys.categories.all, id] as const,
   },
 
   // Warehouses
   warehouses: {
     all: ['warehouses'] as const,
-    list: () => [...queryKeys.warehouses.all, 'list'] as const,
+    list: (filters?: Record<string, unknown>) =>
+      [...queryKeys.warehouses.all, 'list', filters] as const,
     detail: (id: string) => [...queryKeys.warehouses.all, id] as const,
   },
 

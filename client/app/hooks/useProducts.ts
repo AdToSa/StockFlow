@@ -1,10 +1,10 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useNavigate } from 'react-router';
-import { productsService } from '~/services/products.service';
-import { categoriesService } from '~/services/categories.service';
-import { warehousesService } from '~/services/warehouses.service';
-import { queryKeys } from '~/lib/query-client';
-import { toast } from '~/components/ui/Toast';
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useNavigate } from "react-router";
+import { productsService } from "~/services/products.service";
+import { categoriesService } from "~/services/categories.service";
+import { warehousesService } from "~/services/warehouses.service";
+import { queryKeys } from "~/lib/query-client";
+import { toast } from "~/components/ui/Toast";
 import type {
   Product,
   ProductFilters,
@@ -14,7 +14,7 @@ import type {
   LowStockProduct,
   Category,
   Warehouse,
-} from '~/types/product';
+} from "~/types/product";
 
 // Products list hook with filters
 export function useProducts(filters: ProductFilters = {}) {
@@ -42,15 +42,16 @@ export function useCreateProduct() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (data: CreateProductData) => productsService.createProduct(data),
+    mutationFn: (data: CreateProductData) =>
+      productsService.createProduct(data),
     onSuccess: (product) => {
       // Invalidate products list
-      queryClient.invalidateQueries({ queryKey: queryKeys.products.all });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.products.all });
       toast.success(`Producto "${product.name}" creado exitosamente`);
-      navigate('/products');
+      navigate("/products");
     },
     onError: (error: Error) => {
-      toast.error(error.message || 'Error al crear el producto');
+      toast.error(error.message || "Error al crear el producto");
     },
   });
 }
@@ -65,13 +66,13 @@ export function useUpdateProduct() {
       productsService.updateProduct(id, data),
     onSuccess: (product) => {
       // Invalidate products list and specific product
-      queryClient.invalidateQueries({ queryKey: queryKeys.products.all });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.products.all });
       queryClient.setQueryData(queryKeys.products.detail(product.id), product);
       toast.success(`Producto "${product.name}" actualizado exitosamente`);
       navigate(`/products/${product.id}`);
     },
     onError: (error: Error) => {
-      toast.error(error.message || 'Error al actualizar el producto');
+      toast.error(error.message || "Error al actualizar el producto");
     },
   });
 }
@@ -85,12 +86,12 @@ export function useDeleteProduct() {
     mutationFn: (id: string) => productsService.deleteProduct(id),
     onSuccess: () => {
       // Invalidate products list
-      queryClient.invalidateQueries({ queryKey: queryKeys.products.all });
-      toast.success('Producto eliminado exitosamente');
-      navigate('/products');
+      void queryClient.invalidateQueries({ queryKey: queryKeys.products.all });
+      toast.success("Producto eliminado exitosamente");
+      navigate("/products");
     },
     onError: (error: Error) => {
-      toast.error(error.message || 'Error al eliminar el producto');
+      toast.error(error.message || "Error al eliminar el producto");
     },
   });
 }

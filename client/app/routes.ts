@@ -18,10 +18,22 @@ export default [
     route("products/:id", "routes/_app.products.$id.tsx"),
     route("products/:id/edit", "routes/_app.products.$id.edit.tsx"),
 
+    // Categories module
+    route("categories", "routes/_app.categories.tsx"),
+
+    // Warehouses module
+    route("warehouses", "routes/_app.warehouses.tsx"),
+    route("warehouses/new", "routes/_app.warehouses.new.tsx"),
+    route("warehouses/:id", "routes/_app.warehouses.$id.tsx"),
+    route("warehouses/:id/edit", "routes/_app.warehouses.$id.edit.tsx"),
+
+    // Customers module
+    route("customers", "routes/_app.customers.tsx"),
+    route("customers/new", "routes/_app.customers.new.tsx"),
+    route("customers/:id", "routes/_app.customers.$id.tsx"),
+    route("customers/:id/edit", "routes/_app.customers.$id.edit.tsx"),
+
     // Future routes will be added here:
-    // route("categories", "routes/_app.categories.tsx"),
-    // route("warehouses", "routes/_app.warehouses.tsx"),
-    // route("customers", "routes/_app.customers.tsx"),
     // route("invoices", "routes/_app.invoices.tsx"),
     // route("invoices/:id", "routes/_app.invoices.$id.tsx"),
     // route("payments", "routes/_app.payments.tsx"),

@@ -30,8 +30,9 @@ export interface Category {
   parentId?: string;
   parent?: Category;
   children?: Category[];
-  createdAt?: string;
-  updatedAt?: string;
+  productCount?: number;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface Warehouse {
@@ -39,9 +40,15 @@ export interface Warehouse {
   name: string;
   address?: string;
   city?: string;
-  isActive?: boolean;
-  createdAt?: string;
-  updatedAt?: string;
+  phone?: string;
+  email?: string;
+  manager?: string;
+  capacity?: number;
+  currentOccupancy?: number;
+  isActive: boolean;
+  productCount?: number;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface ProductFilters {
