@@ -24,9 +24,9 @@ const mockProduct: Product = {
   minStock: 10,
   maxStock: 100,
   categoryId: '1',
-  category: { id: '1', name: 'Electronica' },
+  category: { id: '1', name: 'Electronica', createdAt: '2024-01-01T00:00:00Z', updatedAt: '2024-01-01T00:00:00Z' },
   warehouseId: '1',
-  warehouse: { id: '1', name: 'Bodega Principal' },
+  warehouse: { id: '1', name: 'Bodega Principal', isActive: true, createdAt: '2024-01-01T00:00:00Z', updatedAt: '2024-01-01T00:00:00Z' },
   images: ['https://images.unsplash.com/photo-1695048133142-1a20484d2569?w=400'],
   status: 'ACTIVE',
   createdAt: '2024-01-10T10:00:00Z',
@@ -349,6 +349,85 @@ describe('productsService', () => {
       result.forEach((product) => {
         expect(product.currentStock).toBeLessThanOrEqual(product.minStock);
       });
+    });
+  });
+
+  describe('sorting', () => {
+    it('should sort products by name ascending', async () => {
+      const filters: ProductFilters = { sortBy: 'name', sortOrder: 'asc' };
+      const promise = productsService.getProducts(filters);
+      vi.advanceTimersByTime(500);
+      const result = await promise;
+
+      for (let i = 0; i < result.data.length - 1; i++) {
+        expect(result.data[i].name.localeCompare(result.data[i + 1].name)).toBeLessThanOrEqual(0);
+      }
+    });
+
+    it('should sort products by name descending', async () => {
+      const filters: ProductFilters = { sortBy: 'name', sortOrder: 'desc' };
+      const promise = productsService.getProducts(filters);
+      vi.advanceTimersByTime(500);
+      const result = await promise;
+
+      for (let i = 0; i < result.data.length - 1; i++) {
+        expect(result.data[i].name.localeCompare(result.data[i + 1].name)).toBeGreaterThanOrEqual(0);
+      }
+    });
+
+    it('should sort products by price ascending', async () => {
+      const filters: ProductFilters = { sortBy: 'price', sortOrder: 'asc' };
+      const promise = productsService.getProducts(filters);
+      vi.advanceTimersByTime(500);
+      const result = await promise;
+
+      for (let i = 0; i < result.data.length - 1; i++) {
+        expect(result.data[i].price).toBeLessThanOrEqual(result.data[i + 1].price);
+      }
+    });
+
+    it('should sort products by price descending', async () => {
+      const filters: ProductFilters = { sortBy: 'price', sortOrder: 'desc' };
+      const promise = productsService.getProducts(filters);
+      vi.advanceTimersByTime(500);
+      const result = await promise;
+
+      for (let i = 0; i < result.data.length - 1; i++) {
+        expect(result.data[i].price).toBeGreaterThanOrEqual(result.data[i + 1].price);
+      }
+    });
+
+    it('should sort products by quantity ascending', async () => {
+      const filters: ProductFilters = { sortBy: 'quantity', sortOrder: 'asc' };
+      const promise = productsService.getProducts(filters);
+      vi.advanceTimersByTime(500);
+      const result = await promise;
+
+      for (let i = 0; i < result.data.length - 1; i++) {
+        expect(result.data[i].quantity).toBeLessThanOrEqual(result.data[i + 1].quantity);
+      }
+    });
+
+    it('should sort products by sku ascending', async () => {
+      const filters: ProductFilters = { sortBy: 'sku', sortOrder: 'asc' };
+      const promise = productsService.getProducts(filters);
+      vi.advanceTimersByTime(500);
+      const result = await promise;
+
+      for (let i = 0; i < result.data.length - 1; i++) {
+        expect(result.data[i].sku.localeCompare(result.data[i + 1].sku)).toBeLessThanOrEqual(0);
+      }
+    });
+
+    it('should default to ascending order when sortOrder is not specified', async () => {
+      const filters: ProductFilters = { sortBy: 'name' };
+      const promise = productsService.getProducts(filters);
+      vi.advanceTimersByTime(500);
+      const result = await promise;
+
+      for (let i = 0; i < result.data.length - 1; i++) {
+        expect(result.data[i].name.localeCompare(result.data[i + 1].name)).toBeLessThanOrEqual(0);
+      }
     });
   });
 });

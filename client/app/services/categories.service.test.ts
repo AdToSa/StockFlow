@@ -186,4 +186,146 @@ describe('categoriesService', () => {
       await expect(promise).rejects.toThrow('Categoria no encontrada');
     });
   });
+
+  describe('getCategoriesWithFilters', () => {
+    it('should return categories with pagination metadata', async () => {
+      const promise = categoriesService.getCategoriesWithFilters();
+      vi.advanceTimersByTime(300);
+      const result = await promise;
+
+      expect(result).toHaveProperty('data');
+      expect(result).toHaveProperty('meta');
+      expect(result.meta).toHaveProperty('total');
+      expect(result.meta).toHaveProperty('page');
+      expect(result.meta).toHaveProperty('limit');
+      expect(result.meta).toHaveProperty('totalPages');
+      expect(Array.isArray(result.data)).toBe(true);
+    });
+
+    it('should filter categories by search term in name', async () => {
+      // Use 'accesorios' which is not modified by other tests (category '2')
+      const promise = categoriesService.getCategoriesWithFilters({ search: 'accesorios' });
+      vi.advanceTimersByTime(300);
+      const result = await promise;
+
+      expect(result.data.length).toBeGreaterThan(0);
+      result.data.forEach((category) => {
+        const matchesSearch =
+          category.name.toLowerCase().includes('accesorios') ||
+          category.description?.toLowerCase().includes('accesorios');
+        expect(matchesSearch).toBe(true);
+      });
+    });
+
+    it('should filter categories by search term in description', async () => {
+      // Use 'decoracion' which appears in category '4' (Hogar) description and is not modified
+      const promise = categoriesService.getCategoriesWithFilters({ search: 'decoracion' });
+      vi.advanceTimersByTime(300);
+      const result = await promise;
+
+      expect(result.data.length).toBeGreaterThan(0);
+      result.data.forEach((category) => {
+        const matchesSearch =
+          category.name.toLowerCase().includes('decoracion') ||
+          category.description?.toLowerCase().includes('decoracion');
+        expect(matchesSearch).toBe(true);
+      });
+    });
+
+    it('should filter categories by parentId', async () => {
+      // First create a parent category
+      const createPromise = categoriesService.createCategory({
+        name: 'Parent Category',
+        description: 'This is a parent',
+      });
+      vi.advanceTimersByTime(400);
+      const parent = await createPromise;
+
+      // Create a child category with parentId
+      const childPromise = categoriesService.createCategory({
+        name: 'Child Category',
+        description: 'This is a child',
+        parentId: parent.id,
+      });
+      vi.advanceTimersByTime(400);
+      await childPromise;
+
+      // Filter by parentId
+      const filterPromise = categoriesService.getCategoriesWithFilters({ parentId: parent.id });
+      vi.advanceTimersByTime(300);
+      const result = await filterPromise;
+
+      result.data.forEach((category) => {
+        expect(category.parentId).toBe(parent.id);
+      });
+    });
+
+    it('should sort categories by name ascending by default', async () => {
+      const promise = categoriesService.getCategoriesWithFilters({ sortBy: 'name', sortOrder: 'asc' });
+      vi.advanceTimersByTime(300);
+      const result = await promise;
+
+      for (let i = 0; i < result.data.length - 1; i++) {
+        expect(result.data[i].name.localeCompare(result.data[i + 1].name)).toBeLessThanOrEqual(0);
+      }
+    });
+
+    it('should sort categories by name descending', async () => {
+      const promise = categoriesService.getCategoriesWithFilters({ sortBy: 'name', sortOrder: 'desc' });
+      vi.advanceTimersByTime(300);
+      const result = await promise;
+
+      for (let i = 0; i < result.data.length - 1; i++) {
+        expect(result.data[i].name.localeCompare(result.data[i + 1].name)).toBeGreaterThanOrEqual(0);
+      }
+    });
+
+    it('should paginate results correctly', async () => {
+      const promise = categoriesService.getCategoriesWithFilters({ page: 1, limit: 3 });
+      vi.advanceTimersByTime(300);
+      const result = await promise;
+
+      expect(result.data.length).toBeLessThanOrEqual(3);
+      expect(result.meta.page).toBe(1);
+      expect(result.meta.limit).toBe(3);
+    });
+
+    it('should return correct page for page 2', async () => {
+      const page1Promise = categoriesService.getCategoriesWithFilters({ page: 1, limit: 2 });
+      vi.advanceTimersByTime(300);
+      const page1 = await page1Promise;
+
+      const page2Promise = categoriesService.getCategoriesWithFilters({ page: 2, limit: 2 });
+      vi.advanceTimersByTime(300);
+      const page2 = await page2Promise;
+
+      expect(page2.meta.page).toBe(2);
+      // Categories from page 1 and page 2 should be different
+      if (page1.data.length > 0 && page2.data.length > 0) {
+        expect(page1.data[0].id).not.toBe(page2.data[0].id);
+      }
+    });
+
+    it('should combine search and pagination filters', async () => {
+      const promise = categoriesService.getCategoriesWithFilters({
+        search: 'a',
+        page: 1,
+        limit: 5,
+      });
+      vi.advanceTimersByTime(300);
+      const result = await promise;
+
+      expect(result.data.length).toBeLessThanOrEqual(5);
+      expect(result.meta.page).toBe(1);
+    });
+
+    it('should handle empty search results', async () => {
+      const promise = categoriesService.getCategoriesWithFilters({ search: 'nonexistentxyz123' });
+      vi.advanceTimersByTime(300);
+      const result = await promise;
+
+      expect(result.data.length).toBe(0);
+      expect(result.meta.total).toBe(0);
+    });
+  });
 });

@@ -226,6 +226,74 @@ describe('Pagination', () => {
       expect(screen.getByRole('button', { name: 'Pagina 1' })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: 'Pagina 10' })).toBeInTheDocument();
     });
+
+    it('should show only right ellipsis when on first pages', () => {
+      const onPageChange = vi.fn();
+      const { container } = render(
+        <Pagination
+          currentPage={2}
+          totalPages={10}
+          onPageChange={onPageChange}
+        />
+      );
+
+      // Should show pages 1,2,3,4,5 and then ellipsis and last page
+      expect(screen.getByRole('button', { name: 'Pagina 1' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Pagina 2' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Pagina 3' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Pagina 4' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Pagina 5' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Pagina 10' })).toBeInTheDocument();
+
+      // Only one ellipsis (on the right side) - target span elements with aria-hidden that are direct children of the page numbers container
+      const ellipsisElements = container.querySelectorAll('span[aria-hidden="true"]');
+      expect(ellipsisElements.length).toBe(1);
+    });
+
+    it('should show only left ellipsis when on last pages', () => {
+      const onPageChange = vi.fn();
+      const { container } = render(
+        <Pagination
+          currentPage={9}
+          totalPages={10}
+          onPageChange={onPageChange}
+        />
+      );
+
+      // Should show first page, ellipsis, and then pages 6,7,8,9,10
+      expect(screen.getByRole('button', { name: 'Pagina 1' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Pagina 6' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Pagina 7' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Pagina 8' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Pagina 9' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Pagina 10' })).toBeInTheDocument();
+
+      // Only one ellipsis (on the left side) - target span elements with aria-hidden
+      const ellipsisElements = container.querySelectorAll('span[aria-hidden="true"]');
+      expect(ellipsisElements.length).toBe(1);
+    });
+
+    it('should show both ellipses when in the middle', () => {
+      const onPageChange = vi.fn();
+      const { container } = render(
+        <Pagination
+          currentPage={5}
+          totalPages={10}
+          onPageChange={onPageChange}
+        />
+      );
+
+      // Should show first page, ellipsis, middle pages, ellipsis, last page
+      expect(screen.getByRole('button', { name: 'Pagina 1' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Pagina 4' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Pagina 5' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Pagina 6' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Pagina 10' })).toBeInTheDocument();
+
+      // Two ellipses (one on each side) - target span elements with aria-hidden
+      const ellipsisElements = container.querySelectorAll('span[aria-hidden="true"]');
+      expect(ellipsisElements.length).toBe(2);
+    });
   });
 
   describe('Sibling Count', () => {

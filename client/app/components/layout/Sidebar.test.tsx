@@ -10,9 +10,10 @@ import { useAuthStore } from '~/stores/auth.store';
 import type { User, Tenant } from '~/stores/auth.store';
 
 // Mock useAuth hook
+const mockLogout = vi.fn();
 vi.mock('~/hooks/useAuth', () => ({
   useAuth: () => ({
-    logout: vi.fn(),
+    logout: mockLogout,
     isLoggingOut: false,
   }),
 }));
@@ -69,6 +70,7 @@ describe('Sidebar', () => {
       isAuthenticated: true,
       isLoading: false,
     });
+    vi.clearAllMocks();
   });
 
   describe('rendering', () => {
@@ -230,6 +232,16 @@ describe('Sidebar', () => {
       render(<Sidebar />, { wrapper: createWrapper() });
 
       expect(screen.getByTitle('Cerrar sesion')).toBeInTheDocument();
+    });
+
+    it('should call logout when logout button is clicked', async () => {
+      const user = userEvent.setup();
+      render(<Sidebar />, { wrapper: createWrapper() });
+
+      const logoutButton = screen.getByTitle('Cerrar sesion');
+      await user.click(logoutButton);
+
+      expect(mockLogout).toHaveBeenCalledTimes(1);
     });
   });
 
