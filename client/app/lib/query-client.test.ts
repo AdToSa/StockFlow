@@ -251,8 +251,12 @@ describe('Query Keys', () => {
       expect(queryKeys.invoices.detail('inv-123')).toEqual(['invoices', 'inv-123']);
     });
 
-    it('generates recent key', () => {
-      expect(queryKeys.invoices.recent()).toEqual(['invoices', 'recent']);
+    it('generates recent key without limit', () => {
+      expect(queryKeys.invoices.recent()).toEqual(['invoices', 'recent', undefined]);
+    });
+
+    it('generates recent key with limit', () => {
+      expect(queryKeys.invoices.recent(10)).toEqual(['invoices', 'recent', 10]);
     });
   });
 

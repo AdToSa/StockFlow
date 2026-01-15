@@ -85,7 +85,10 @@ export const queryKeys = {
     list: (filters?: Record<string, unknown>) =>
       [...queryKeys.invoices.all, 'list', filters] as const,
     detail: (id: string) => [...queryKeys.invoices.all, id] as const,
-    recent: () => [...queryKeys.invoices.all, 'recent'] as const,
+    recent: (limit?: number) => [...queryKeys.invoices.all, 'recent', limit] as const,
+    byCustomer: (customerId: string) =>
+      [...queryKeys.invoices.all, 'customer', customerId] as const,
+    stats: () => [...queryKeys.invoices.all, 'stats'] as const,
   },
 
   // Payments
