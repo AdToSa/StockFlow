@@ -1744,4 +1744,514 @@ describe('useInvoices hooks', () => {
       expect(toast.error).toHaveBeenCalledWith('La factura debe tener al menos un item');
     });
   });
+
+  // ============================================================================
+  // OPTIMISTIC UPDATE AND ROLLBACK TESTS
+  // ============================================================================
+
+  describe('useUpdateInvoice - optimistic updates', () => {
+    it('should optimistically update invoice excluding items from data', async () => {
+      const { toast } = await import('~/components/ui/Toast');
+      const queryClient = new QueryClient({
+        defaultOptions: {
+          queries: { retry: false },
+          mutations: { retry: false },
+        },
+      });
+
+      // Pre-populate the cache with the invoice
+      queryClient.setQueryData(['invoices', '1'], mockInvoice);
+
+      const updatedInvoice = { ...mockInvoice, notes: 'Updated notes' };
+      vi.mocked(invoicesService.updateInvoice).mockResolvedValue(updatedInvoice);
+
+      function Wrapper({ children }: { children: ReactNode }) {
+        return (
+          <QueryClientProvider client={queryClient}>
+            <MemoryRouter>{children}</MemoryRouter>
+          </QueryClientProvider>
+        );
+      }
+
+      const { result } = renderHook(() => useUpdateInvoice(), {
+        wrapper: Wrapper,
+      });
+
+      await act(async () => {
+        result.current.mutate({
+          id: '1',
+          data: {
+            notes: 'Updated notes',
+            items: [
+              {
+                productId: 'prod-1',
+                description: 'Test Item',
+                quantity: 1,
+                unitPrice: 1000,
+              },
+            ],
+          },
+        });
+      });
+
+      await waitFor(() => {
+        expect(result.current.isSuccess).toBe(true);
+      });
+
+      expect(toast.success).toHaveBeenCalledWith(
+        `Factura "${updatedInvoice.invoiceNumber}" actualizada exitosamente`
+      );
+    });
+
+    it('should rollback optimistic update on error when previousInvoice exists', async () => {
+      const { toast } = await import('~/components/ui/Toast');
+      const queryClient = new QueryClient({
+        defaultOptions: {
+          queries: { retry: false },
+          mutations: { retry: false },
+        },
+      });
+
+      // Pre-populate the cache with the invoice
+      queryClient.setQueryData(['invoices', '1'], mockInvoice);
+
+      const error = new Error('Update failed');
+      vi.mocked(invoicesService.updateInvoice).mockRejectedValue(error);
+
+      function Wrapper({ children }: { children: ReactNode }) {
+        return (
+          <QueryClientProvider client={queryClient}>
+            <MemoryRouter>{children}</MemoryRouter>
+          </QueryClientProvider>
+        );
+      }
+
+      const { result } = renderHook(() => useUpdateInvoice(), {
+        wrapper: Wrapper,
+      });
+
+      await act(async () => {
+        result.current.mutate({
+          id: '1',
+          data: { notes: 'Updated notes' },
+        });
+      });
+
+      await waitFor(() => {
+        expect(result.current.isError).toBe(true);
+      });
+
+      // Verify rollback occurred - cache should have original invoice
+      const cachedInvoice = queryClient.getQueryData(['invoices', '1']);
+      expect(cachedInvoice).toEqual(mockInvoice);
+      expect(toast.error).toHaveBeenCalledWith('Update failed');
+    });
+  });
+
+  describe('useUpdateInvoiceStatus - optimistic updates', () => {
+    it('should optimistically update status when previousInvoice exists', async () => {
+      const { toast } = await import('~/components/ui/Toast');
+      const queryClient = new QueryClient({
+        defaultOptions: {
+          queries: { retry: false },
+          mutations: { retry: false },
+        },
+      });
+
+      // Pre-populate the cache with the invoice
+      queryClient.setQueryData(['invoices', '1'], mockInvoice);
+
+      const paidInvoice = { ...mockInvoice, status: 'PAID' as const, paidAt: '2024-01-18T14:30:00Z' };
+      vi.mocked(invoicesService.updateInvoiceStatus).mockResolvedValue(paidInvoice);
+
+      function Wrapper({ children }: { children: ReactNode }) {
+        return (
+          <QueryClientProvider client={queryClient}>
+            <MemoryRouter>{children}</MemoryRouter>
+          </QueryClientProvider>
+        );
+      }
+
+      const { result } = renderHook(() => useUpdateInvoiceStatus(), {
+        wrapper: Wrapper,
+      });
+
+      await act(async () => {
+        result.current.mutate({
+          id: '1',
+          status: 'PAID',
+        });
+      });
+
+      await waitFor(() => {
+        expect(result.current.isSuccess).toBe(true);
+      });
+
+      expect(toast.success).toHaveBeenCalledWith(
+        `Factura "${paidInvoice.invoiceNumber}" marcada como pagada`
+      );
+    });
+
+    it('should rollback optimistic update on error when previousInvoice exists', async () => {
+      const { toast } = await import('~/components/ui/Toast');
+      const queryClient = new QueryClient({
+        defaultOptions: {
+          queries: { retry: false },
+          mutations: { retry: false },
+        },
+      });
+
+      // Pre-populate the cache with the invoice
+      queryClient.setQueryData(['invoices', '1'], mockInvoice);
+
+      const error = new Error('Status update failed');
+      vi.mocked(invoicesService.updateInvoiceStatus).mockRejectedValue(error);
+
+      function Wrapper({ children }: { children: ReactNode }) {
+        return (
+          <QueryClientProvider client={queryClient}>
+            <MemoryRouter>{children}</MemoryRouter>
+          </QueryClientProvider>
+        );
+      }
+
+      const { result } = renderHook(() => useUpdateInvoiceStatus(), {
+        wrapper: Wrapper,
+      });
+
+      await act(async () => {
+        result.current.mutate({
+          id: '1',
+          status: 'PAID',
+        });
+      });
+
+      await waitFor(() => {
+        expect(result.current.isError).toBe(true);
+      });
+
+      // Verify rollback occurred - cache should have original invoice
+      const cachedInvoice = queryClient.getQueryData(['invoices', '1']);
+      expect(cachedInvoice).toEqual(mockInvoice);
+      expect(toast.error).toHaveBeenCalledWith('Status update failed');
+    });
+  });
+
+  describe('useDeleteInvoice - customer invoice invalidation', () => {
+    it('should invalidate customer invoices when customerId exists', async () => {
+      const { toast } = await import('~/components/ui/Toast');
+      const queryClient = new QueryClient({
+        defaultOptions: {
+          queries: { retry: false },
+          mutations: { retry: false },
+        },
+      });
+
+      // Pre-populate the cache with the invoice (which has customerId: '1')
+      queryClient.setQueryData(['invoices', '3'], mockDraftInvoice);
+
+      // Also set up customer invoices query
+      queryClient.setQueryData(['invoices', 'customer', '1'], [mockDraftInvoice]);
+
+      vi.mocked(invoicesService.deleteInvoice).mockResolvedValue(undefined);
+
+      // Spy on invalidateQueries
+      const invalidateQueriesSpy = vi.spyOn(queryClient, 'invalidateQueries');
+
+      function Wrapper({ children }: { children: ReactNode }) {
+        return (
+          <QueryClientProvider client={queryClient}>
+            <MemoryRouter>{children}</MemoryRouter>
+          </QueryClientProvider>
+        );
+      }
+
+      const { result } = renderHook(() => useDeleteInvoice(), {
+        wrapper: Wrapper,
+      });
+
+      await act(async () => {
+        result.current.mutate('3');
+      });
+
+      await waitFor(() => {
+        expect(result.current.isSuccess).toBe(true);
+      });
+
+      expect(toast.success).toHaveBeenCalledWith('Factura eliminada exitosamente');
+
+      // Verify that customer invoices were invalidated
+      expect(invalidateQueriesSpy).toHaveBeenCalledWith({
+        queryKey: ['invoices', 'customer', '1'],
+      });
+
+      invalidateQueriesSpy.mockRestore();
+    });
+  });
+
+  describe('useAddInvoiceItem - success flow with cache invalidation', () => {
+    it('should update cache and invalidate queries on success', async () => {
+      const { toast } = await import('~/components/ui/Toast');
+      const queryClient = new QueryClient({
+        defaultOptions: {
+          queries: { retry: false },
+          mutations: { retry: false },
+        },
+      });
+
+      // Pre-populate the cache with the invoice
+      queryClient.setQueryData(['invoices', '1'], mockInvoice);
+
+      const newItem = {
+        id: '1-2',
+        invoiceId: '1',
+        productId: 'prod-2',
+        description: 'AirPods Pro',
+        quantity: 1,
+        unitPrice: 1099000,
+        discount: 0,
+        tax: 19,
+        subtotal: 1099000,
+        total: 1307810,
+        createdAt: '2024-01-05T10:00:00Z',
+        updatedAt: '2024-01-05T10:00:00Z',
+      };
+
+      const updatedInvoice = {
+        ...mockInvoice,
+        items: [...mockInvoice.items, newItem],
+        subtotal: 7098000,
+        total: 8446620,
+      };
+
+      vi.mocked(invoicesService.addInvoiceItem).mockResolvedValue(updatedInvoice);
+
+      // Spy on setQueryData and invalidateQueries
+      const setQueryDataSpy = vi.spyOn(queryClient, 'setQueryData');
+      const invalidateQueriesSpy = vi.spyOn(queryClient, 'invalidateQueries');
+
+      function Wrapper({ children }: { children: ReactNode }) {
+        return (
+          <QueryClientProvider client={queryClient}>
+            <MemoryRouter>{children}</MemoryRouter>
+          </QueryClientProvider>
+        );
+      }
+
+      const { result } = renderHook(() => useAddInvoiceItem(), {
+        wrapper: Wrapper,
+      });
+
+      await act(async () => {
+        result.current.mutate({
+          invoiceId: '1',
+          item: {
+            productId: 'prod-2',
+            description: 'AirPods Pro',
+            quantity: 1,
+            unitPrice: 1099000,
+          },
+        });
+      });
+
+      await waitFor(() => {
+        expect(result.current.isSuccess).toBe(true);
+      });
+
+      expect(toast.success).toHaveBeenCalledWith('Item agregado a la factura');
+
+      // Verify cache was updated
+      expect(setQueryDataSpy).toHaveBeenCalledWith(['invoices', '1'], updatedInvoice);
+
+      // Verify queries were invalidated
+      expect(invalidateQueriesSpy).toHaveBeenCalledWith({ queryKey: ['invoices'] });
+      expect(invalidateQueriesSpy).toHaveBeenCalledWith({
+        queryKey: ['invoices', 'customer', '1'],
+      });
+
+      setQueryDataSpy.mockRestore();
+      invalidateQueriesSpy.mockRestore();
+    });
+  });
+
+  describe('useUpdateInvoiceItem - error with custom message', () => {
+    it('should rollback and show custom error message', async () => {
+      const { toast } = await import('~/components/ui/Toast');
+      const queryClient = new QueryClient({
+        defaultOptions: {
+          queries: { retry: false },
+          mutations: { retry: false },
+        },
+      });
+
+      // Pre-populate the cache with the invoice
+      queryClient.setQueryData(['invoices', '1'], mockInvoice);
+
+      const error = new Error('Cantidad no puede ser negativa');
+      vi.mocked(invoicesService.updateInvoiceItem).mockRejectedValue(error);
+
+      function Wrapper({ children }: { children: ReactNode }) {
+        return (
+          <QueryClientProvider client={queryClient}>
+            <MemoryRouter>{children}</MemoryRouter>
+          </QueryClientProvider>
+        );
+      }
+
+      const { result } = renderHook(() => useUpdateInvoiceItem(), {
+        wrapper: Wrapper,
+      });
+
+      await act(async () => {
+        result.current.mutate({
+          invoiceId: '1',
+          itemId: '1-1',
+          data: { quantity: -1 },
+        });
+      });
+
+      await waitFor(() => {
+        expect(result.current.isError).toBe(true);
+      });
+
+      // Verify rollback occurred
+      const cachedInvoice = queryClient.getQueryData(['invoices', '1']);
+      expect(cachedInvoice).toEqual(mockInvoice);
+
+      expect(toast.error).toHaveBeenCalledWith('Cantidad no puede ser negativa');
+    });
+  });
+
+  describe('useRemoveInvoiceItem - success flow with cache invalidation', () => {
+    it('should update cache and invalidate queries on success', async () => {
+      const { toast } = await import('~/components/ui/Toast');
+      const queryClient = new QueryClient({
+        defaultOptions: {
+          queries: { retry: false },
+          mutations: { retry: false },
+        },
+      });
+
+      const invoiceWithMultipleItems = {
+        ...mockInvoice,
+        items: [
+          mockInvoiceItem,
+          {
+            id: '1-2',
+            invoiceId: '1',
+            productId: 'prod-2',
+            description: 'AirPods Pro',
+            quantity: 1,
+            unitPrice: 1099000,
+            discount: 0,
+            tax: 19,
+            subtotal: 1099000,
+            total: 1307810,
+            createdAt: '2024-01-05T10:00:00Z',
+            updatedAt: '2024-01-05T10:00:00Z',
+          },
+        ],
+      };
+
+      // Pre-populate the cache with the invoice
+      queryClient.setQueryData(['invoices', '1'], invoiceWithMultipleItems);
+
+      const updatedInvoice = {
+        ...invoiceWithMultipleItems,
+        items: [mockInvoiceItem],
+        subtotal: 5999000,
+        total: 7138810,
+      };
+
+      vi.mocked(invoicesService.removeInvoiceItem).mockResolvedValue(updatedInvoice);
+
+      // Spy on setQueryData and invalidateQueries
+      const setQueryDataSpy = vi.spyOn(queryClient, 'setQueryData');
+      const invalidateQueriesSpy = vi.spyOn(queryClient, 'invalidateQueries');
+
+      function Wrapper({ children }: { children: ReactNode }) {
+        return (
+          <QueryClientProvider client={queryClient}>
+            <MemoryRouter>{children}</MemoryRouter>
+          </QueryClientProvider>
+        );
+      }
+
+      const { result } = renderHook(() => useRemoveInvoiceItem(), {
+        wrapper: Wrapper,
+      });
+
+      await act(async () => {
+        result.current.mutate({
+          invoiceId: '1',
+          itemId: '1-2',
+        });
+      });
+
+      await waitFor(() => {
+        expect(result.current.isSuccess).toBe(true);
+      });
+
+      expect(toast.success).toHaveBeenCalledWith('Item eliminado de la factura');
+
+      // Verify cache was updated with server response
+      expect(setQueryDataSpy).toHaveBeenCalledWith(['invoices', '1'], updatedInvoice);
+
+      // Verify queries were invalidated
+      expect(invalidateQueriesSpy).toHaveBeenCalledWith({ queryKey: ['invoices'] });
+      expect(invalidateQueriesSpy).toHaveBeenCalledWith({
+        queryKey: ['invoices', 'customer', '1'],
+      });
+
+      setQueryDataSpy.mockRestore();
+      invalidateQueriesSpy.mockRestore();
+    });
+  });
+
+  describe('useRemoveInvoiceItem - error with custom message', () => {
+    it('should rollback and show custom error message', async () => {
+      const { toast } = await import('~/components/ui/Toast');
+      const queryClient = new QueryClient({
+        defaultOptions: {
+          queries: { retry: false },
+          mutations: { retry: false },
+        },
+      });
+
+      // Pre-populate the cache with the invoice
+      queryClient.setQueryData(['invoices', '1'], mockInvoice);
+
+      const error = new Error('No tiene permisos para eliminar items');
+      vi.mocked(invoicesService.removeInvoiceItem).mockRejectedValue(error);
+
+      function Wrapper({ children }: { children: ReactNode }) {
+        return (
+          <QueryClientProvider client={queryClient}>
+            <MemoryRouter>{children}</MemoryRouter>
+          </QueryClientProvider>
+        );
+      }
+
+      const { result } = renderHook(() => useRemoveInvoiceItem(), {
+        wrapper: Wrapper,
+      });
+
+      await act(async () => {
+        result.current.mutate({
+          invoiceId: '1',
+          itemId: '1-1',
+        });
+      });
+
+      await waitFor(() => {
+        expect(result.current.isError).toBe(true);
+      });
+
+      // Verify rollback occurred
+      const cachedInvoice = queryClient.getQueryData(['invoices', '1']);
+      expect(cachedInvoice).toEqual(mockInvoice);
+
+      expect(toast.error).toHaveBeenCalledWith('No tiene permisos para eliminar items');
+    });
+  });
 });

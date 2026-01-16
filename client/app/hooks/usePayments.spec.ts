@@ -878,6 +878,24 @@ describe('usePayments hooks', () => {
         'No se puede modificar un pago reembolsado'
       );
     });
+
+    it('should use default error message when error has no message', async () => {
+      vi.mocked(paymentsService.updatePayment).mockRejectedValue(new Error());
+
+      const { result } = renderHook(() => useUpdatePayment(), {
+        wrapper: createWrapper(),
+      });
+
+      await act(async () => {
+        result.current.mutate({ id: '1', data: { amount: 9000000 } });
+      });
+
+      await waitFor(() => {
+        expect(result.current.isError).toBe(true);
+      });
+
+      expect(toast.error).toHaveBeenCalledWith('Error al actualizar el pago');
+    });
   });
 
   describe('useUpdatePaymentStatus', () => {
@@ -1352,6 +1370,690 @@ describe('usePayments hooks', () => {
       });
 
       expect(toast.error).toHaveBeenCalledWith('Error al registrar el pago');
+    });
+  });
+
+  // ============================================================================
+  // ADDITIONAL BRANCH COVERAGE TESTS
+  // ============================================================================
+
+  describe('useUpdatePaymentStatus - branch coverage', () => {
+    it('should handle onMutate when previousPayment exists', async () => {
+      const updatedPayment: Payment = {
+        ...mockPayment,
+        status: 'COMPLETED',
+      };
+
+      vi.mocked(paymentsService.updatePaymentStatus).mockImplementation(
+        () =>
+          new Promise((resolve) => setTimeout(() => resolve(updatedPayment), 50))
+      );
+
+      const { wrapper, queryClient } = createWrapperWithClient();
+      // Set previous payment in cache
+      queryClient.setQueryData(queryKeys.payments.detail('1'), mockPayment);
+
+      const { result } = renderHook(() => useUpdatePaymentStatus(), { wrapper });
+
+      await act(async () => {
+        result.current.mutate({ id: '1', status: 'COMPLETED' });
+      });
+
+      // Check optimistic update was applied (previousPayment existed)
+      const optimisticData = queryClient.getQueryData<Payment>(
+        queryKeys.payments.detail('1')
+      );
+      expect(optimisticData?.status).toBe('COMPLETED');
+
+      await waitFor(() => {
+        expect(result.current.isSuccess).toBe(true);
+      });
+    });
+
+    it('should handle onMutate when previousPayment does NOT exist', async () => {
+      const updatedPayment: Payment = {
+        ...mockPayment,
+        status: 'COMPLETED',
+      };
+
+      vi.mocked(paymentsService.updatePaymentStatus).mockResolvedValue(updatedPayment);
+
+      const { wrapper, queryClient } = createWrapperWithClient();
+      // DO NOT set previous payment in cache - this covers the branch where previousPayment is undefined
+
+      const { result } = renderHook(() => useUpdatePaymentStatus(), { wrapper });
+
+      await act(async () => {
+        result.current.mutate({ id: '1', status: 'COMPLETED' });
+      });
+
+      await waitFor(() => {
+        expect(result.current.isSuccess).toBe(true);
+      });
+
+      // The mutation should still succeed even without previous data
+      expect(paymentsService.updatePaymentStatus).toHaveBeenCalledWith('1', 'COMPLETED');
+    });
+
+    it('should handle onError rollback when context.previousPayment exists', async () => {
+      const error = new Error('Status update failed');
+      vi.mocked(paymentsService.updatePaymentStatus).mockRejectedValue(error);
+
+      const queryClient = new QueryClient({
+        defaultOptions: {
+          queries: { retry: false, gcTime: 1000 * 60, staleTime: 0 },
+          mutations: { retry: false },
+        },
+      });
+
+      const wrapper = function Wrapper({ children }: { children: React.ReactNode }) {
+        return React.createElement(QueryClientProvider, { client: queryClient }, children);
+      };
+
+      // Set previous payment with PENDING status
+      queryClient.setQueryData(queryKeys.payments.detail('1'), {
+        ...mockPayment,
+        status: 'PENDING',
+      });
+
+      const { result } = renderHook(() => useUpdatePaymentStatus(), { wrapper });
+
+      await act(async () => {
+        result.current.mutate({ id: '1', status: 'COMPLETED' });
+      });
+
+      await waitFor(() => {
+        expect(result.current.isError).toBe(true);
+      });
+
+      // Verify rollback occurred
+      const rolledBackData = queryClient.getQueryData<Payment>(
+        queryKeys.payments.detail('1')
+      );
+      expect(rolledBackData?.status).toBe('PENDING');
+    });
+
+    it('should handle onError when context.previousPayment does NOT exist', async () => {
+      const error = new Error('Status update failed');
+      vi.mocked(paymentsService.updatePaymentStatus).mockRejectedValue(error);
+
+      const { wrapper, queryClient } = createWrapperWithClient();
+      // DO NOT set previous payment - context.previousPayment will be undefined
+
+      const { result } = renderHook(() => useUpdatePaymentStatus(), { wrapper });
+
+      await act(async () => {
+        result.current.mutate({ id: '1', status: 'COMPLETED' });
+      });
+
+      await waitFor(() => {
+        expect(result.current.isError).toBe(true);
+      });
+
+      // Should still show error toast even without rollback data
+      expect(toast.error).toHaveBeenCalledWith('Status update failed');
+
+      // Cache should remain empty (no rollback needed)
+      const data = queryClient.getQueryData<Payment>(queryKeys.payments.detail('1'));
+      expect(data).toBeUndefined();
+    });
+
+    it('should use default error message when error has no message in onError', async () => {
+      vi.mocked(paymentsService.updatePaymentStatus).mockRejectedValue(new Error());
+
+      const { result } = renderHook(() => useUpdatePaymentStatus(), {
+        wrapper: createWrapper(),
+      });
+
+      await act(async () => {
+        result.current.mutate({ id: '1', status: 'COMPLETED' });
+      });
+
+      await waitFor(() => {
+        expect(result.current.isError).toBe(true);
+      });
+
+      expect(toast.error).toHaveBeenCalledWith('Error al actualizar el estado del pago');
+    });
+  });
+
+  describe('useDeletePayment - branch coverage', () => {
+    it('should handle onSuccess when payment data exists with invoiceId and customerId', async () => {
+      vi.mocked(paymentsService.deletePayment).mockResolvedValue();
+
+      const { wrapper, queryClient } = createWrapperWithClient();
+      const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries');
+
+      // Set payment with both invoiceId and customerId
+      queryClient.setQueryData(queryKeys.payments.detail('1'), {
+        ...mockPayment,
+        invoiceId: 'inv-123',
+        customerId: 'cust-456',
+      });
+
+      const { result } = renderHook(() => useDeletePayment(), { wrapper });
+
+      await act(async () => {
+        result.current.mutate('1');
+      });
+
+      await waitFor(() => {
+        expect(result.current.isSuccess).toBe(true);
+      });
+
+      // Verify invoice payments were invalidated
+      expect(invalidateSpy).toHaveBeenCalledWith({
+        queryKey: queryKeys.payments.byInvoice('inv-123'),
+      });
+      // Verify invoice detail was invalidated
+      expect(invalidateSpy).toHaveBeenCalledWith({
+        queryKey: queryKeys.invoices.detail('inv-123'),
+      });
+      // Verify customer payments were invalidated
+      expect(invalidateSpy).toHaveBeenCalledWith({
+        queryKey: queryKeys.payments.byCustomer('cust-456'),
+      });
+    });
+
+    it('should handle onSuccess when payment data does NOT exist in cache', async () => {
+      vi.mocked(paymentsService.deletePayment).mockResolvedValue();
+
+      const { wrapper, queryClient } = createWrapperWithClient();
+      const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries');
+
+      // DO NOT set payment data in cache
+
+      const { result } = renderHook(() => useDeletePayment(), { wrapper });
+
+      await act(async () => {
+        result.current.mutate('1');
+      });
+
+      await waitFor(() => {
+        expect(result.current.isSuccess).toBe(true);
+      });
+
+      // Should still invalidate general queries
+      expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: queryKeys.payments.all });
+      expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: queryKeys.invoices.all });
+      expect(toast.success).toHaveBeenCalledWith('Pago eliminado exitosamente');
+    });
+
+    it('should handle onSuccess when payment has invoiceId but no customerId', async () => {
+      vi.mocked(paymentsService.deletePayment).mockResolvedValue();
+
+      const { wrapper, queryClient } = createWrapperWithClient();
+      const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries');
+
+      // Set payment with invoiceId but without customerId
+      const paymentWithoutCustomer: Payment = {
+        ...mockPayment,
+        invoiceId: 'inv-789',
+        customerId: '', // Empty customerId
+      };
+      queryClient.setQueryData(queryKeys.payments.detail('1'), paymentWithoutCustomer);
+
+      const { result } = renderHook(() => useDeletePayment(), { wrapper });
+
+      await act(async () => {
+        result.current.mutate('1');
+      });
+
+      await waitFor(() => {
+        expect(result.current.isSuccess).toBe(true);
+      });
+
+      // Should invalidate invoice payments (invoiceId exists)
+      expect(invalidateSpy).toHaveBeenCalledWith({
+        queryKey: queryKeys.payments.byInvoice('inv-789'),
+      });
+      // Should NOT have been called with empty customerId for byCustomer
+      const byCustomerCalls = invalidateSpy.mock.calls.filter(
+        (call) => call[0]?.queryKey === queryKeys.payments.byCustomer('')
+      );
+      expect(byCustomerCalls.length).toBe(0);
+    });
+
+    it('should handle onSuccess when payment has customerId but no invoiceId', async () => {
+      vi.mocked(paymentsService.deletePayment).mockResolvedValue();
+
+      const { wrapper, queryClient } = createWrapperWithClient();
+      const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries');
+
+      // Set payment with customerId but without invoiceId
+      const paymentWithoutInvoice: Payment = {
+        ...mockPayment,
+        invoiceId: '', // Empty invoiceId
+        customerId: 'cust-999',
+      };
+      queryClient.setQueryData(queryKeys.payments.detail('1'), paymentWithoutInvoice);
+
+      const { result } = renderHook(() => useDeletePayment(), { wrapper });
+
+      await act(async () => {
+        result.current.mutate('1');
+      });
+
+      await waitFor(() => {
+        expect(result.current.isSuccess).toBe(true);
+      });
+
+      // Should invalidate customer payments (customerId exists)
+      expect(invalidateSpy).toHaveBeenCalledWith({
+        queryKey: queryKeys.payments.byCustomer('cust-999'),
+      });
+      // Should NOT have been called with empty invoiceId for byInvoice
+      const byInvoiceCalls = invalidateSpy.mock.calls.filter(
+        (call) => call[0]?.queryKey === queryKeys.payments.byInvoice('')
+      );
+      expect(byInvoiceCalls.length).toBe(0);
+    });
+
+    it('should use default error message when error has no message', async () => {
+      vi.mocked(paymentsService.deletePayment).mockRejectedValue(new Error());
+
+      const { result } = renderHook(() => useDeletePayment(), {
+        wrapper: createWrapper(),
+      });
+
+      await act(async () => {
+        result.current.mutate('1');
+      });
+
+      await waitFor(() => {
+        expect(result.current.isError).toBe(true);
+      });
+
+      expect(toast.error).toHaveBeenCalledWith('Error al eliminar el pago');
+    });
+  });
+
+  describe('useRefundPayment - branch coverage', () => {
+    it('should handle full refund where payment.id equals id', async () => {
+      const fullRefundPayment: Payment = {
+        ...mockPayment,
+        id: '1', // Same as the id passed to mutate
+        status: 'REFUNDED',
+        refundedAt: new Date().toISOString(),
+        refundAmount: mockPayment.amount,
+      };
+
+      vi.mocked(paymentsService.refundPayment).mockResolvedValue(fullRefundPayment);
+
+      // Use QueryClient with longer gcTime to preserve cache
+      const queryClient = new QueryClient({
+        defaultOptions: {
+          queries: { retry: false, gcTime: 1000 * 60, staleTime: 0 },
+          mutations: { retry: false },
+        },
+      });
+
+      const wrapper = function Wrapper({ children }: { children: React.ReactNode }) {
+        return React.createElement(QueryClientProvider, { client: queryClient }, children);
+      };
+
+      queryClient.setQueryData(queryKeys.payments.detail('1'), mockPayment);
+
+      const { result } = renderHook(() => useRefundPayment(), { wrapper });
+
+      await act(async () => {
+        result.current.mutate({ id: '1' });
+      });
+
+      await waitFor(() => {
+        expect(result.current.isSuccess).toBe(true);
+      });
+
+      // Full refund - original payment should be updated in cache
+      const cachedPayment = queryClient.getQueryData<Payment>(
+        queryKeys.payments.detail('1')
+      );
+      expect(cachedPayment?.status).toBe('REFUNDED');
+      expect(cachedPayment?.id).toBe('1');
+    });
+
+    it('should handle partial refund where payment.id differs from original id', async () => {
+      const partialRefundPayment: Payment = {
+        ...mockPayment,
+        id: 'refund-new-id', // Different from the original '1'
+        paymentNumber: 'PAG-2024-REFUND',
+        amount: -500000,
+        status: 'REFUNDED',
+        refundAmount: 500000,
+      };
+
+      vi.mocked(paymentsService.refundPayment).mockResolvedValue(partialRefundPayment);
+
+      const { wrapper, queryClient } = createWrapperWithClient();
+      const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries');
+      queryClient.setQueryData(queryKeys.payments.detail('1'), mockPayment);
+
+      const { result } = renderHook(() => useRefundPayment(), { wrapper });
+
+      await act(async () => {
+        result.current.mutate({ id: '1', amount: 500000 });
+      });
+
+      await waitFor(() => {
+        expect(result.current.isSuccess).toBe(true);
+      });
+
+      // Partial refund - should invalidate the original payment detail
+      expect(invalidateSpy).toHaveBeenCalledWith({
+        queryKey: queryKeys.payments.detail('1'),
+      });
+    });
+
+    it('should handle refund when originalPayment exists in cache', async () => {
+      const refundedPayment: Payment = {
+        ...mockPayment,
+        status: 'REFUNDED',
+        refundAmount: mockPayment.amount,
+      };
+
+      vi.mocked(paymentsService.refundPayment).mockResolvedValue(refundedPayment);
+
+      const { wrapper, queryClient } = createWrapperWithClient();
+      const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries');
+
+      // Set original payment in cache
+      queryClient.setQueryData(queryKeys.payments.detail('1'), {
+        ...mockPayment,
+        invoiceId: 'inv-original',
+        customerId: 'cust-original',
+      });
+
+      const { result } = renderHook(() => useRefundPayment(), { wrapper });
+
+      await act(async () => {
+        result.current.mutate({ id: '1' });
+      });
+
+      await waitFor(() => {
+        expect(result.current.isSuccess).toBe(true);
+      });
+
+      // Should use invoiceId from payment (has higher priority)
+      expect(invalidateSpy).toHaveBeenCalledWith({
+        queryKey: queryKeys.payments.byInvoice(refundedPayment.invoiceId),
+      });
+    });
+
+    it('should handle refund when originalPayment does NOT exist in cache', async () => {
+      const refundedPayment: Payment = {
+        ...mockPayment,
+        status: 'REFUNDED',
+        refundAmount: mockPayment.amount,
+        invoiceId: 'inv-from-response',
+        customerId: 'cust-from-response',
+      };
+
+      vi.mocked(paymentsService.refundPayment).mockResolvedValue(refundedPayment);
+
+      const { wrapper, queryClient } = createWrapperWithClient();
+      const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries');
+
+      // DO NOT set original payment in cache
+
+      const { result } = renderHook(() => useRefundPayment(), { wrapper });
+
+      await act(async () => {
+        result.current.mutate({ id: '1' });
+      });
+
+      await waitFor(() => {
+        expect(result.current.isSuccess).toBe(true);
+      });
+
+      // Should use invoiceId from payment response
+      expect(invalidateSpy).toHaveBeenCalledWith({
+        queryKey: queryKeys.payments.byInvoice('inv-from-response'),
+      });
+      expect(invalidateSpy).toHaveBeenCalledWith({
+        queryKey: queryKeys.payments.byCustomer('cust-from-response'),
+      });
+    });
+
+    it('should use invoiceId from originalPayment when payment.invoiceId is empty', async () => {
+      const refundedPayment: Payment = {
+        ...mockPayment,
+        status: 'REFUNDED',
+        refundAmount: mockPayment.amount,
+        invoiceId: '', // Empty in response
+      };
+
+      vi.mocked(paymentsService.refundPayment).mockResolvedValue(refundedPayment);
+
+      const { wrapper, queryClient } = createWrapperWithClient();
+      const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries');
+
+      // Set original payment with invoiceId
+      queryClient.setQueryData(queryKeys.payments.detail('1'), {
+        ...mockPayment,
+        invoiceId: 'inv-from-original',
+      });
+
+      const { result } = renderHook(() => useRefundPayment(), { wrapper });
+
+      await act(async () => {
+        result.current.mutate({ id: '1' });
+      });
+
+      await waitFor(() => {
+        expect(result.current.isSuccess).toBe(true);
+      });
+
+      // Should fall back to originalPayment.invoiceId
+      expect(invalidateSpy).toHaveBeenCalledWith({
+        queryKey: queryKeys.payments.byInvoice('inv-from-original'),
+      });
+    });
+
+    it('should use customerId from originalPayment when payment.customerId is empty', async () => {
+      const refundedPayment: Payment = {
+        ...mockPayment,
+        status: 'REFUNDED',
+        refundAmount: mockPayment.amount,
+        customerId: '', // Empty in response
+      };
+
+      vi.mocked(paymentsService.refundPayment).mockResolvedValue(refundedPayment);
+
+      const { wrapper, queryClient } = createWrapperWithClient();
+      const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries');
+
+      // Set original payment with customerId
+      queryClient.setQueryData(queryKeys.payments.detail('1'), {
+        ...mockPayment,
+        customerId: 'cust-from-original',
+      });
+
+      const { result } = renderHook(() => useRefundPayment(), { wrapper });
+
+      await act(async () => {
+        result.current.mutate({ id: '1' });
+      });
+
+      await waitFor(() => {
+        expect(result.current.isSuccess).toBe(true);
+      });
+
+      // Should fall back to originalPayment.customerId
+      expect(invalidateSpy).toHaveBeenCalledWith({
+        queryKey: queryKeys.payments.byCustomer('cust-from-original'),
+      });
+    });
+
+    it('should not invalidate invoice payments when neither payment nor originalPayment has invoiceId', async () => {
+      const refundedPayment: Payment = {
+        ...mockPayment,
+        status: 'REFUNDED',
+        refundAmount: mockPayment.amount,
+        invoiceId: '', // Empty
+        customerId: 'cust-1',
+      };
+
+      vi.mocked(paymentsService.refundPayment).mockResolvedValue(refundedPayment);
+
+      const { wrapper, queryClient } = createWrapperWithClient();
+      const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries');
+
+      // Set original payment without invoiceId
+      queryClient.setQueryData(queryKeys.payments.detail('1'), {
+        ...mockPayment,
+        invoiceId: '', // Also empty
+      });
+
+      const { result } = renderHook(() => useRefundPayment(), { wrapper });
+
+      await act(async () => {
+        result.current.mutate({ id: '1' });
+      });
+
+      await waitFor(() => {
+        expect(result.current.isSuccess).toBe(true);
+      });
+
+      // Should NOT have called byInvoice with empty string
+      const byInvoiceCalls = invalidateSpy.mock.calls.filter(
+        (call) => {
+          const queryKey = call[0]?.queryKey;
+          return Array.isArray(queryKey) && queryKey.includes('byInvoice');
+        }
+      );
+      expect(byInvoiceCalls.length).toBe(0);
+    });
+
+    it('should not invalidate customer payments when neither payment nor originalPayment has customerId', async () => {
+      const refundedPayment: Payment = {
+        ...mockPayment,
+        status: 'REFUNDED',
+        refundAmount: mockPayment.amount,
+        invoiceId: 'inv-1',
+        customerId: '', // Empty
+      };
+
+      vi.mocked(paymentsService.refundPayment).mockResolvedValue(refundedPayment);
+
+      const { wrapper, queryClient } = createWrapperWithClient();
+      const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries');
+
+      // Set original payment without customerId
+      queryClient.setQueryData(queryKeys.payments.detail('1'), {
+        ...mockPayment,
+        customerId: '', // Also empty
+      });
+
+      const { result } = renderHook(() => useRefundPayment(), { wrapper });
+
+      await act(async () => {
+        result.current.mutate({ id: '1' });
+      });
+
+      await waitFor(() => {
+        expect(result.current.isSuccess).toBe(true);
+      });
+
+      // Should NOT have called byCustomer with empty string
+      const byCustomerCalls = invalidateSpy.mock.calls.filter(
+        (call) => {
+          const queryKey = call[0]?.queryKey;
+          return Array.isArray(queryKey) && queryKey.includes('byCustomer');
+        }
+      );
+      expect(byCustomerCalls.length).toBe(0);
+    });
+
+    it('should show error with custom message from error', async () => {
+      const customError = new Error('Refund limit exceeded');
+      vi.mocked(paymentsService.refundPayment).mockRejectedValue(customError);
+
+      const { result } = renderHook(() => useRefundPayment(), {
+        wrapper: createWrapper(),
+      });
+
+      await act(async () => {
+        result.current.mutate({ id: '1' });
+      });
+
+      await waitFor(() => {
+        expect(result.current.isError).toBe(true);
+      });
+
+      expect(toast.error).toHaveBeenCalledWith('Refund limit exceeded');
+    });
+
+    it('should show default error message when error has no message', async () => {
+      vi.mocked(paymentsService.refundPayment).mockRejectedValue(new Error());
+
+      const { result } = renderHook(() => useRefundPayment(), {
+        wrapper: createWrapper(),
+      });
+
+      await act(async () => {
+        result.current.mutate({ id: '1' });
+      });
+
+      await waitFor(() => {
+        expect(result.current.isError).toBe(true);
+      });
+
+      expect(toast.error).toHaveBeenCalledWith('Error al procesar el reembolso');
+    });
+
+    it('should use refundAmount when available, otherwise use payment.amount', async () => {
+      // Test case 1: refundAmount is available
+      const paymentWithRefundAmount: Payment = {
+        ...mockPayment,
+        status: 'REFUNDED',
+        refundAmount: 1500000,
+        amount: 8446620, // Different from refundAmount
+      };
+
+      vi.mocked(paymentsService.refundPayment).mockResolvedValue(paymentWithRefundAmount);
+
+      const { wrapper, queryClient } = createWrapperWithClient();
+      queryClient.setQueryData(queryKeys.payments.detail('1'), mockPayment);
+
+      const { result } = renderHook(() => useRefundPayment(), { wrapper });
+
+      await act(async () => {
+        result.current.mutate({ id: '1', amount: 1500000 });
+      });
+
+      await waitFor(() => {
+        expect(result.current.isSuccess).toBe(true);
+      });
+
+      // Should format the refundAmount (1,500,000)
+      expect(toast.success).toHaveBeenCalled();
+    });
+
+    it('should use payment.amount when refundAmount is not available', async () => {
+      const paymentWithoutRefundAmount: Payment = {
+        ...mockPayment,
+        status: 'REFUNDED',
+        refundAmount: undefined as unknown as number, // No refundAmount
+        amount: -2000000, // Negative for refund
+      };
+
+      vi.mocked(paymentsService.refundPayment).mockResolvedValue(paymentWithoutRefundAmount);
+
+      const { wrapper, queryClient } = createWrapperWithClient();
+      queryClient.setQueryData(queryKeys.payments.detail('1'), mockPayment);
+
+      const { result } = renderHook(() => useRefundPayment(), { wrapper });
+
+      await act(async () => {
+        result.current.mutate({ id: '1' });
+      });
+
+      await waitFor(() => {
+        expect(result.current.isSuccess).toBe(true);
+      });
+
+      // Should format the absolute value of payment.amount (2,000,000)
+      expect(toast.success).toHaveBeenCalled();
     });
   });
 });

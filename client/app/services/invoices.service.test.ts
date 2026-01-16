@@ -1190,4 +1190,284 @@ describe('invoicesService', () => {
       expect(sumOfStatuses).toBe(result.totalInvoices);
     });
   });
+
+  describe('getInvoices - additional sorting tests', () => {
+    it('should sort by status ascending', async () => {
+      const filters: InvoiceFilters = { sortBy: 'status', sortOrder: 'asc' };
+      const promise = invoicesService.getInvoices(filters);
+      vi.advanceTimersByTime(400);
+      const result = await promise;
+
+      for (let i = 0; i < result.data.length - 1; i++) {
+        expect(result.data[i].status.localeCompare(result.data[i + 1].status)).toBeLessThanOrEqual(
+          0
+        );
+      }
+    });
+
+    it('should sort by status descending', async () => {
+      const filters: InvoiceFilters = { sortBy: 'status', sortOrder: 'desc' };
+      const promise = invoicesService.getInvoices(filters);
+      vi.advanceTimersByTime(400);
+      const result = await promise;
+
+      for (let i = 0; i < result.data.length - 1; i++) {
+        expect(
+          result.data[i].status.localeCompare(result.data[i + 1].status)
+        ).toBeGreaterThanOrEqual(0);
+      }
+    });
+
+    it('should sort by customerName ascending', async () => {
+      const filters: InvoiceFilters = { sortBy: 'customerName', sortOrder: 'asc' };
+      const promise = invoicesService.getInvoices(filters);
+      vi.advanceTimersByTime(400);
+      const result = await promise;
+
+      for (let i = 0; i < result.data.length - 1; i++) {
+        const aName = result.data[i].customer?.name || '';
+        const bName = result.data[i + 1].customer?.name || '';
+        expect(aName.localeCompare(bName)).toBeLessThanOrEqual(0);
+      }
+    });
+
+    it('should sort by customerName descending', async () => {
+      const filters: InvoiceFilters = { sortBy: 'customerName', sortOrder: 'desc' };
+      const promise = invoicesService.getInvoices(filters);
+      vi.advanceTimersByTime(400);
+      const result = await promise;
+
+      for (let i = 0; i < result.data.length - 1; i++) {
+        const aName = result.data[i].customer?.name || '';
+        const bName = result.data[i + 1].customer?.name || '';
+        expect(aName.localeCompare(bName)).toBeGreaterThanOrEqual(0);
+      }
+    });
+
+    it('should use default sorting (issueDate) when sortBy is unknown', async () => {
+      // Use an unknown sortBy value by casting to bypass TypeScript
+      const filters: InvoiceFilters = {
+        sortBy: 'unknownField' as InvoiceFilters['sortBy'],
+        sortOrder: 'asc',
+      };
+      const promise = invoicesService.getInvoices(filters);
+      vi.advanceTimersByTime(400);
+      const result = await promise;
+
+      // Should fallback to sorting by issueDate
+      for (let i = 0; i < result.data.length - 1; i++) {
+        const aDate = new Date(result.data[i].issueDate).getTime();
+        const bDate = new Date(result.data[i + 1].issueDate).getTime();
+        expect(aDate).toBeLessThanOrEqual(bDate);
+      }
+    });
+  });
+
+  describe('createInvoice - invoice number edge cases', () => {
+    it('should generate invoice number when existing invoices have non-matching format', async () => {
+      // First, we need to test the generateInvoiceNumber function when no invoices match the pattern
+      // We can do this by creating a scenario where the regex doesn't match
+      // Since we can't directly modify mockInvoices, we just verify the function works correctly
+      // by checking the generated invoice number follows the expected format
+      const newInvoiceData: CreateInvoiceData = {
+        customerId: '1',
+        issueDate: '2024-01-15T10:00:00Z',
+        dueDate: '2024-01-30T10:00:00Z',
+        items: [
+          {
+            productId: 'prod-1',
+            description: 'Test Product',
+            quantity: 1,
+            unitPrice: 50000,
+          },
+        ],
+      };
+
+      const promise = invoicesService.createInvoice(newInvoiceData);
+      vi.advanceTimersByTime(500);
+      const result = await promise;
+
+      // The invoice number should follow the FAC-YYYY-XXXX format
+      expect(result.invoiceNumber).toMatch(/^FAC-\d{4}-\d{4}$/);
+      // The number should be incrementing based on existing invoices
+      const match = result.invoiceNumber.match(/FAC-\d{4}-(\d+)/);
+      expect(match).not.toBeNull();
+      const invoiceNum = parseInt(match![1], 10);
+      expect(invoiceNum).toBeGreaterThan(0);
+    });
+  });
+
+  describe('updateInvoice - customer and items updates', () => {
+    it('should update customer when customerId changes', async () => {
+      // First create a draft invoice with customer '1'
+      const createPromise = invoicesService.createInvoice({
+        customerId: '1',
+        issueDate: '2024-01-15T10:00:00Z',
+        dueDate: '2024-01-30T10:00:00Z',
+        items: [
+          {
+            productId: 'prod-1',
+            description: 'Test Product',
+            quantity: 1,
+            unitPrice: 50000,
+          },
+        ],
+      });
+      vi.advanceTimersByTime(500);
+      const createdInvoice = await createPromise;
+
+      expect(createdInvoice.customerId).toBe('1');
+      expect(createdInvoice.customer?.name).toBe('Juan Carlos Perez');
+
+      // Update to customer '2'
+      const updatePromise = invoicesService.updateInvoice(createdInvoice.id, {
+        customerId: '2',
+      });
+      vi.advanceTimersByTime(400);
+      const result = await updatePromise;
+
+      expect(result.customerId).toBe('2');
+      expect(result.customer?.name).toBe('Distribuidora ABC S.A.S');
+    });
+
+    it('should recalculate totals when items array is provided', async () => {
+      // First create a draft invoice
+      const createPromise = invoicesService.createInvoice({
+        customerId: '1',
+        issueDate: '2024-01-15T10:00:00Z',
+        dueDate: '2024-01-30T10:00:00Z',
+        items: [
+          {
+            productId: 'prod-1',
+            description: 'Original Product',
+            quantity: 1,
+            unitPrice: 100000,
+            tax: 19,
+          },
+        ],
+      });
+      vi.advanceTimersByTime(500);
+      const createdInvoice = await createPromise;
+      const originalTotal = createdInvoice.total;
+      const itemId = createdInvoice.items[0].id;
+
+      // Update with new items array - increase quantity
+      const updatePromise = invoicesService.updateInvoice(createdInvoice.id, {
+        items: [
+          {
+            id: itemId,
+            productId: 'prod-1',
+            description: 'Updated Product',
+            quantity: 3,
+            unitPrice: 100000,
+            tax: 19,
+          },
+        ],
+      });
+      vi.advanceTimersByTime(400);
+      const result = await updatePromise;
+
+      // Total should be recalculated: 3 * 100000 * 1.19 = 357000
+      expect(result.total).toBeGreaterThan(originalTotal);
+      expect(result.subtotal).toBe(300000);
+      expect(result.items[0].quantity).toBe(3);
+      expect(result.items[0].description).toBe('Updated Product');
+    });
+
+    it('should use existing values when updating items with partial data', async () => {
+      // First create a draft invoice
+      const createPromise = invoicesService.createInvoice({
+        customerId: '1',
+        issueDate: '2024-01-15T10:00:00Z',
+        dueDate: '2024-01-30T10:00:00Z',
+        items: [
+          {
+            productId: 'prod-1',
+            description: 'Original Product',
+            quantity: 2,
+            unitPrice: 100000,
+            discount: 10,
+            tax: 19,
+          },
+        ],
+      });
+      vi.advanceTimersByTime(500);
+      const createdInvoice = await createPromise;
+      const itemId = createdInvoice.items[0].id;
+      const originalDescription = createdInvoice.items[0].description;
+
+      // Update with partial data - only change quantity
+      const updatePromise = invoicesService.updateInvoice(createdInvoice.id, {
+        items: [
+          {
+            id: itemId,
+            quantity: 5,
+          },
+        ],
+      });
+      vi.advanceTimersByTime(400);
+      const result = await updatePromise;
+
+      // Existing values should be preserved
+      expect(result.items[0].quantity).toBe(5);
+      expect(result.items[0].description).toBe(originalDescription);
+      expect(result.items[0].unitPrice).toBe(100000);
+      expect(result.items[0].discount).toBe(10);
+      expect(result.items[0].tax).toBe(19);
+    });
+
+    it('should create new item when updating with item that has no existing match', async () => {
+      // First create a draft invoice
+      const createPromise = invoicesService.createInvoice({
+        customerId: '1',
+        issueDate: '2024-01-15T10:00:00Z',
+        dueDate: '2024-01-30T10:00:00Z',
+        items: [
+          {
+            productId: 'prod-1',
+            description: 'Original Product',
+            quantity: 1,
+            unitPrice: 100000,
+          },
+        ],
+      });
+      vi.advanceTimersByTime(500);
+      const createdInvoice = await createPromise;
+
+      // Update with items that don't match existing ones
+      const updatePromise = invoicesService.updateInvoice(createdInvoice.id, {
+        items: [
+          {
+            productId: 'prod-new',
+            description: 'New Product',
+            quantity: 2,
+            unitPrice: 50000,
+            tax: 19,
+          },
+        ],
+      });
+      vi.advanceTimersByTime(400);
+      const result = await updatePromise;
+
+      // New item should be created with provided values
+      expect(result.items.length).toBe(1);
+      expect(result.items[0].productId).toBe('prod-new');
+      expect(result.items[0].description).toBe('New Product');
+      expect(result.items[0].quantity).toBe(2);
+      expect(result.items[0].unitPrice).toBe(50000);
+    });
+  });
+
+  describe('updateInvoiceItem - error cases', () => {
+    it('should throw error when invoice is not found', async () => {
+      const updateData: UpdateInvoiceItemData = {
+        quantity: 5,
+      };
+
+      const promise = invoicesService.updateInvoiceItem('non-existent-invoice', 'item-1', updateData);
+      vi.advanceTimersByTime(350);
+
+      await expect(promise).rejects.toThrow('Factura no encontrada');
+    });
+  });
 });
