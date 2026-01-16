@@ -39,8 +39,12 @@ export default [
     route("invoices/:id", "routes/_app.invoices.$id.tsx"),
     route("invoices/:id/edit", "routes/_app.invoices.$id.edit.tsx"),
 
+    // Payments module
+    route("payments", "routes/_app.payments.tsx"),
+    route("payments/new", "routes/_app.payments.new.tsx"),
+    route("payments/:id", "routes/_app.payments.$id.tsx"),
+
     // Future routes will be added here:
-    // route("payments", "routes/_app.payments.tsx"),
     // route("reports", "routes/_app.reports.tsx"),
     // route("settings", "routes/_app.settings.tsx"),
     // route("profile", "routes/_app.profile.tsx"),

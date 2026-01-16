@@ -265,8 +265,8 @@ describe('Query Keys', () => {
       expect(queryKeys.payments.all).toEqual(['payments']);
     });
 
-    it('generates list key for invoice', () => {
-      expect(queryKeys.payments.list('inv-456')).toEqual([
+    it('generates byInvoice key', () => {
+      expect(queryKeys.payments.byInvoice('inv-456')).toEqual([
         'payments',
         'invoice',
         'inv-456',

@@ -94,8 +94,15 @@ export const queryKeys = {
   // Payments
   payments: {
     all: ['payments'] as const,
-    list: (invoiceId: string) =>
+    list: (filters?: Record<string, unknown>) =>
+      [...queryKeys.payments.all, 'list', filters] as const,
+    detail: (id: string) => [...queryKeys.payments.all, id] as const,
+    byInvoice: (invoiceId: string) =>
       [...queryKeys.payments.all, 'invoice', invoiceId] as const,
+    byCustomer: (customerId: string) =>
+      [...queryKeys.payments.all, 'customer', customerId] as const,
+    recent: (limit?: number) => [...queryKeys.payments.all, 'recent', limit] as const,
+    stats: () => [...queryKeys.payments.all, 'stats'] as const,
   },
 
   // Dashboard
