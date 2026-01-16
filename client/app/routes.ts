@@ -47,8 +47,8 @@ export default [
     // Reports module
     route("reports", "routes/_app.reports.tsx"),
 
-    // Future routes will be added here:
-    // route("settings", "routes/_app.settings.tsx"),
-    // route("profile", "routes/_app.profile.tsx"),
+    // Settings and Profile
+    route("settings", "routes/_app.settings.tsx"),
+    route("profile", "routes/_app.profile.tsx"),
   ]),
 ] satisfies RouteConfig;

@@ -135,4 +135,10 @@ export const queryKeys = {
     all: ['tenants'] as const,
     current: () => [...queryKeys.tenants.all, 'current'] as const,
   },
+
+  // Settings
+  settings: {
+    all: ['settings'] as const,
+    preferences: () => [...queryKeys.settings.all, 'preferences'] as const,
+  },
 };
