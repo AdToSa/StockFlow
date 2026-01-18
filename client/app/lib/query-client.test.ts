@@ -315,8 +315,32 @@ describe('Query Keys', () => {
       expect(queryKeys.notifications.all).toEqual(['notifications']);
     });
 
-    it('generates unread key', () => {
-      expect(queryKeys.notifications.unread()).toEqual(['notifications', 'unread']);
+    it('generates list key', () => {
+      expect(queryKeys.notifications.list()).toEqual(['notifications', 'list', undefined]);
+    });
+
+    it('generates list key with filters', () => {
+      expect(queryKeys.notifications.list({ read: false })).toEqual([
+        'notifications',
+        'list',
+        { read: false },
+      ]);
+    });
+
+    it('generates detail key', () => {
+      expect(queryKeys.notifications.detail('123')).toEqual(['notifications', '123']);
+    });
+
+    it('generates recent key', () => {
+      expect(queryKeys.notifications.recent()).toEqual(['notifications', 'recent', undefined]);
+    });
+
+    it('generates recent key with limit', () => {
+      expect(queryKeys.notifications.recent(5)).toEqual(['notifications', 'recent', 5]);
+    });
+
+    it('generates unreadCount key', () => {
+      expect(queryKeys.notifications.unreadCount()).toEqual(['notifications', 'unread-count']);
     });
   });
 

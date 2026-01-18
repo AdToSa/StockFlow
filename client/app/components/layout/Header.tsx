@@ -10,42 +10,29 @@ import {
   LogOut,
   ChevronDown,
   X,
+  Check,
+  AlertTriangle,
+  CheckCircle,
+  Info,
+  AlertCircle,
+  Loader2,
 } from 'lucide-react';
 import { cn, getInitials, formatRelativeTime } from '~/lib/utils';
 import { useUIStore } from '~/stores/ui.store';
 import { useAuthStore } from '~/stores/auth.store';
 import { useAuth } from '~/hooks/useAuth';
+import {
+  useRecentNotifications,
+  useUnreadCount,
+  useMarkAsRead,
+  useMarkAllAsRead,
+  useNotificationClick,
+} from '~/hooks/useNotifications';
+import { getNotificationCategory } from '~/types/notification';
+import type { NotificationSummary, NotificationCategory } from '~/types/notification';
 import { ThemeToggle } from '~/components/ui/ThemeToggle';
 import { Button } from '~/components/ui/Button';
 import { Input } from '~/components/ui/Input';
-
-// Mock notifications for development
-const mockNotifications = [
-  {
-    id: '1',
-    title: 'Stock bajo',
-    message: 'El producto "Laptop HP" tiene stock bajo (5 unidades)',
-    createdAt: new Date(Date.now() - 1000 * 60 * 30), // 30 min ago
-    read: false,
-    type: 'warning' as const,
-  },
-  {
-    id: '2',
-    title: 'Nueva factura',
-    message: 'Se ha creado la factura #INV-2024-0125',
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 2), // 2 hours ago
-    read: false,
-    type: 'info' as const,
-  },
-  {
-    id: '3',
-    title: 'Pago recibido',
-    message: 'Se ha registrado un pago de $1,500,000 COP',
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24), // 1 day ago
-    read: true,
-    type: 'success' as const,
-  },
-];
 
 const dropdownVariants = {
   hidden: {
@@ -86,12 +73,19 @@ export function Header() {
   const { user, tenant } = useAuthStore();
   const { logout, isLoggingOut } = useAuth();
 
+  // Notification hooks
+  const { data: notifications = [], isLoading: notificationsLoading } = useRecentNotifications(5);
+  const { data: unreadCountData } = useUnreadCount();
+  const markAsRead = useMarkAsRead();
+  const markAllAsRead = useMarkAllAsRead();
+  const handleNotificationClick = useNotificationClick();
+
   const userName = user ? `${user.firstName} ${user.lastName}` : 'Usuario';
   const userEmail = user?.email || 'usuario@email.com';
   const userInitials = getInitials(userName);
   const userRole = user?.role || 'EMPLOYEE';
 
-  const unreadCount = mockNotifications.filter((n) => !n.read).length;
+  const unreadCount = unreadCountData?.count ?? 0;
 
   // Handle keyboard shortcut for search
   useEffect(() => {
@@ -140,14 +134,29 @@ export function Header() {
     return labels[role] || role;
   };
 
-  const getNotificationIcon = (type: string) => {
-    switch (type) {
+  const getNotificationIconClass = (category: NotificationCategory) => {
+    switch (category) {
       case 'warning':
         return 'bg-warning-100 text-warning-600 dark:bg-warning-900/30 dark:text-warning-400';
       case 'success':
         return 'bg-success-100 text-success-600 dark:bg-success-900/30 dark:text-success-400';
+      case 'error':
+        return 'bg-error-100 text-error-600 dark:bg-error-900/30 dark:text-error-400';
       default:
         return 'bg-primary-100 text-primary-600 dark:bg-primary-900/30 dark:text-primary-400';
+    }
+  };
+
+  const getNotificationIcon = (category: NotificationCategory) => {
+    switch (category) {
+      case 'warning':
+        return <AlertTriangle className="h-5 w-5" />;
+      case 'success':
+        return <CheckCircle className="h-5 w-5" />;
+      case 'error':
+        return <AlertCircle className="h-5 w-5" />;
+      default:
+        return <Info className="h-5 w-5" />;
     }
   };
 
@@ -291,50 +300,73 @@ export function Header() {
                       Notificaciones
                     </h3>
                     {unreadCount > 0 && (
-                      <span className="text-xs text-primary-600 dark:text-primary-400 font-medium">
-                        {unreadCount} sin leer
-                      </span>
+                      <button
+                        onClick={() => markAllAsRead.mutate()}
+                        disabled={markAllAsRead.isPending}
+                        className="flex items-center gap-1 text-xs text-primary-600 dark:text-primary-400 font-medium hover:underline disabled:opacity-50"
+                      >
+                        {markAllAsRead.isPending ? (
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                        ) : (
+                          <Check className="h-3 w-3" />
+                        )}
+                        Marcar todas como leidas
+                      </button>
                     )}
                   </div>
 
                   {/* Notifications list */}
                   <div className="max-h-96 overflow-y-auto">
-                    {mockNotifications.length > 0 ? (
-                      mockNotifications.map((notification) => (
-                        <div
-                          key={notification.id}
-                          className={cn(
-                            'flex items-start gap-3 px-4 py-3',
-                            'hover:bg-neutral-50 dark:hover:bg-neutral-800',
-                            'transition-colors cursor-pointer',
-                            !notification.read &&
-                              'bg-primary-50/50 dark:bg-primary-900/10'
-                          )}
-                        >
+                    {notificationsLoading ? (
+                      <div className="px-4 py-8 text-center">
+                        <Loader2 className="h-8 w-8 mx-auto text-neutral-400 animate-spin mb-3" />
+                        <p className="text-sm text-neutral-500 dark:text-neutral-400">
+                          Cargando notificaciones...
+                        </p>
+                      </div>
+                    ) : notifications.length > 0 ? (
+                      notifications.map((notification) => {
+                        const category = getNotificationCategory(notification);
+                        return (
                           <div
+                            key={notification.id}
+                            onClick={() => {
+                              handleNotificationClick(notification);
+                              setNotificationsOpen(false);
+                            }}
                             className={cn(
-                              'flex h-10 w-10 items-center justify-center rounded-full flex-shrink-0',
-                              getNotificationIcon(notification.type)
+                              'flex items-start gap-3 px-4 py-3',
+                              'hover:bg-neutral-50 dark:hover:bg-neutral-800',
+                              'transition-colors cursor-pointer',
+                              !notification.read &&
+                                'bg-primary-50/50 dark:bg-primary-900/10'
                             )}
                           >
-                            <Bell className="h-5 w-5" />
+                            <div
+                              className={cn(
+                                'flex h-10 w-10 items-center justify-center rounded-full flex-shrink-0',
+                                getNotificationIconClass(category)
+                              )}
+                            >
+                              {getNotificationIcon(category)}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-neutral-900 dark:text-white">
+                                {notification.title}
+                              </p>
+                              <p className="text-sm text-neutral-500 dark:text-neutral-400 truncate">
+                                {notification.message}
+                              </p>
+                              <p className="text-xs text-neutral-400 mt-1">
+                                {formatRelativeTime(notification.createdAt)}
+                              </p>
+                            </div>
+                            {!notification.read && (
+                              <div className="h-2 w-2 rounded-full bg-primary-500 flex-shrink-0 mt-2" />
+                            )}
                           </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-neutral-900 dark:text-white">
-                              {notification.title}
-                            </p>
-                            <p className="text-sm text-neutral-500 dark:text-neutral-400 truncate">
-                              {notification.message}
-                            </p>
-                            <p className="text-xs text-neutral-400 mt-1">
-                              {formatRelativeTime(notification.createdAt)}
-                            </p>
-                          </div>
-                          {!notification.read && (
-                            <div className="h-2 w-2 rounded-full bg-primary-500 flex-shrink-0 mt-2" />
-                          )}
-                        </div>
-                      ))
+                        );
+                      })
                     ) : (
                       <div className="px-4 py-8 text-center">
                         <Bell className="h-12 w-12 mx-auto text-neutral-300 dark:text-neutral-600 mb-3" />
@@ -346,8 +378,8 @@ export function Header() {
                   </div>
 
                   {/* Footer */}
-                  {mockNotifications.length > 0 && (
-                    <div className="border-t border-neutral-100 dark:border-neutral-800 px-4 py-3">
+                  {notifications.length > 0 && (
+                    <div className="flex items-center justify-between border-t border-neutral-100 dark:border-neutral-800 px-4 py-3">
                       <Link
                         to="/notifications"
                         className="text-sm text-primary-600 dark:text-primary-400 font-medium hover:underline"
@@ -355,6 +387,11 @@ export function Header() {
                       >
                         Ver todas las notificaciones
                       </Link>
+                      {unreadCount > 0 && (
+                        <span className="text-xs text-neutral-500 dark:text-neutral-400">
+                          {unreadCount} sin leer
+                        </span>
+                      )}
                     </div>
                   )}
                 </motion.div>

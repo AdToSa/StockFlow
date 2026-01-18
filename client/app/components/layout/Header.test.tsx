@@ -18,6 +18,61 @@ vi.mock('~/hooks/useAuth', () => ({
   }),
 }));
 
+// Mock notification hooks
+const mockMarkAsReadMutate = vi.fn();
+const mockMarkAllAsReadMutate = vi.fn();
+const mockNotificationClick = vi.fn();
+
+vi.mock('~/hooks/useNotifications', () => ({
+  useRecentNotifications: () => ({
+    data: [
+      {
+        id: '1',
+        type: 'LOW_STOCK',
+        title: 'Stock bajo',
+        message: 'El producto "Widget A" tiene stock bajo',
+        priority: 'HIGH',
+        read: false,
+        link: '/products/1',
+        createdAt: new Date().toISOString(),
+      },
+      {
+        id: '2',
+        type: 'NEW_INVOICE',
+        title: 'Nueva factura',
+        message: 'Se ha creado la factura #INV-001',
+        priority: 'MEDIUM',
+        read: false,
+        link: '/invoices/1',
+        createdAt: new Date().toISOString(),
+      },
+      {
+        id: '3',
+        type: 'PAYMENT_RECEIVED',
+        title: 'Pago recibido',
+        message: 'Se ha recibido un pago de $1,000',
+        priority: 'LOW',
+        read: true,
+        link: '/payments/1',
+        createdAt: new Date().toISOString(),
+      },
+    ],
+    isLoading: false,
+  }),
+  useUnreadCount: () => ({
+    data: { count: 2, byType: {}, byPriority: {} },
+  }),
+  useMarkAsRead: () => ({
+    mutate: mockMarkAsReadMutate,
+    isPending: false,
+  }),
+  useMarkAllAsRead: () => ({
+    mutate: mockMarkAllAsReadMutate,
+    isPending: false,
+  }),
+  useNotificationClick: () => mockNotificationClick,
+}));
+
 // Mock ThemeToggle to simplify testing
 vi.mock('~/components/ui/ThemeToggle', () => ({
   ThemeToggle: () => <button data-testid="theme-toggle">Theme</button>,

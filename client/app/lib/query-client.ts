@@ -127,7 +127,11 @@ export const queryKeys = {
   // Notifications
   notifications: {
     all: ['notifications'] as const,
-    unread: () => [...queryKeys.notifications.all, 'unread'] as const,
+    list: (filters?: Record<string, unknown>) =>
+      [...queryKeys.notifications.all, 'list', filters] as const,
+    detail: (id: string) => [...queryKeys.notifications.all, id] as const,
+    recent: (limit?: number) => [...queryKeys.notifications.all, 'recent', limit] as const,
+    unreadCount: () => [...queryKeys.notifications.all, 'unread-count'] as const,
   },
 
   // Tenants
