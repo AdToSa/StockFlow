@@ -4,6 +4,7 @@
   "type": "module",
   "scripts": {
     "build": "react-router build",
+    "build:analyze": "ANALYZE=true react-router build",
     "dev": "react-router dev",
     "start": "react-router-serve ./build/server/index.js",
     "typecheck": "react-router typegen && tsc",
@@ -54,9 +55,11 @@
     "jsdom": "^27.4.0",
     "prettier": "^3.7.4",
     "prettier-plugin-tailwindcss": "^0.7.2",
+    "rollup-plugin-visualizer": "^6.0.5",
     "tailwindcss": "^4.1.13",
     "typescript": "^5.9.2",
     "vite": "^7.1.7",
+    "vite-plugin-compression": "^0.5.1",
     "vite-tsconfig-paths": "^5.1.4",
     "vitest": "^4.0.17"
   }

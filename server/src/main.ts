@@ -4,6 +4,8 @@ import { NestExpressApplication } from '@nestjs/platform-express';
 import { Logger, ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { join } from 'path';
+import compression from 'compression';
+import helmet from 'helmet';
 import { AppModule } from './app.module';
 import {
   AllExceptionsFilter,
@@ -15,12 +17,90 @@ import { LoggingInterceptor } from './common/interceptors';
 
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
+  const isProduction = process.env.NODE_ENV === 'production';
 
   // Enable rawBody for Stripe webhook signature verification
   // This preserves the raw Buffer on req.rawBody for specific routes
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     rawBody: true,
   });
+
+  // Trust proxy when running behind nginx/load balancer in production
+  // This ensures correct client IP detection and secure cookie handling
+  if (isProduction) {
+    app.set('trust proxy', 1);
+  }
+
+  // Compression middleware for gzip response compression
+  // - level 6: balanced compression ratio vs CPU usage
+  // - threshold 1024: only compress responses >= 1KB
+  app.use(
+    compression({
+      level: 6,
+      threshold: 1024,
+    }),
+  );
+
+  // Helmet for security headers
+  // Configured to be permissive enough for a React SaaS application
+  app.use(
+    helmet({
+      // Content Security Policy - allow inline scripts/styles for React
+      contentSecurityPolicy: {
+        directives: {
+          defaultSrc: ["'self'"],
+          scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+          styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
+          fontSrc: ["'self'", 'https://fonts.gstatic.com', 'data:'],
+          imgSrc: ["'self'", 'data:', 'https:', 'blob:'],
+          connectSrc: ["'self'", 'https:', 'wss:'],
+          frameSrc: ["'self'"],
+          objectSrc: ["'none'"],
+          upgradeInsecureRequests: isProduction ? [] : null,
+        },
+      },
+      // HTTP Strict Transport Security - enforce HTTPS in production
+      strictTransportSecurity: isProduction
+        ? {
+            maxAge: 31536000, // 1 year
+            includeSubDomains: true,
+            preload: true,
+          }
+        : false,
+      // X-Frame-Options - allow framing from same origin only
+      frameguard: {
+        action: 'sameorigin',
+      },
+      // X-Content-Type-Options - prevent MIME type sniffing
+      noSniff: true,
+      // Referrer-Policy - control referrer information
+      referrerPolicy: {
+        policy: 'strict-origin-when-cross-origin',
+      },
+      // X-XSS-Protection - legacy XSS protection (modern browsers use CSP)
+      xssFilter: true,
+      // Hide X-Powered-By header
+      hidePoweredBy: true,
+      // X-DNS-Prefetch-Control - control DNS prefetching
+      dnsPrefetchControl: {
+        allow: true,
+      },
+      // Cross-Origin-Embedder-Policy - disabled for compatibility with external resources
+      crossOriginEmbedderPolicy: false,
+      // Cross-Origin-Opener-Policy - same-origin for security
+      crossOriginOpenerPolicy: {
+        policy: 'same-origin',
+      },
+      // Cross-Origin-Resource-Policy - same-origin for security
+      crossOriginResourcePolicy: {
+        policy: 'same-origin',
+      },
+    }),
+  );
+
+  // Enable graceful shutdown hooks for clean resource cleanup
+  // Handles SIGTERM/SIGINT signals for proper container orchestration
+  app.enableShutdownHooks();
 
   // Serve static files from the uploads directory
   // Files will be accessible at /uploads/* URL paths
@@ -61,53 +141,66 @@ async function bootstrap() {
   );
 
   // Swagger API documentation configuration
-  const config = new DocumentBuilder()
-    .setTitle('StockFlow API')
-    .setDescription('API documentation for StockFlow SaaS - Inventory Management System')
-    .setVersion('1.0')
-    .addBearerAuth(
-      {
-        type: 'http',
-        scheme: 'bearer',
-        bearerFormat: 'JWT',
-        name: 'JWT',
-        description: 'Enter JWT token',
-        in: 'header',
-      },
-      'JWT-auth',
-    )
-    .addTag('health', 'Health check and system status endpoints')
-    .addTag('auth', 'Authentication endpoints for login, register, and token management')
-    .addTag('users', 'User management endpoints')
-    .addTag('products', 'Product management endpoints')
-    .addTag('categories', 'Product category management endpoints')
-    .addTag('warehouses', 'Warehouse management endpoints')
-    .addTag('customers', 'Customer management endpoints')
-    .addTag('invoices', 'Invoice management endpoints')
-    .addTag('payments', 'Payment management endpoints')
-    .addTag('stock-movements', 'Stock movement tracking endpoints')
-    .addTag('dashboard', 'Dashboard analytics and metrics endpoints')
-    .addTag('reports', 'Report generation endpoints')
-    .addTag('notifications', 'Notification management endpoints')
-    .addTag('subscriptions', 'Subscription and billing management endpoints')
-    .addTag('audit', 'Audit log endpoints for activity tracking')
-    .addTag('upload', 'File upload endpoints')
-    .build();
+  // Only enabled in non-production OR when ENABLE_SWAGGER is explicitly set
+  const enableSwagger = !isProduction || process.env.ENABLE_SWAGGER === 'true';
 
-  const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api/docs', app, document, {
-    swaggerOptions: {
-      persistAuthorization: true,
-      tagsSorter: 'alpha',
-      operationsSorter: 'alpha',
-    },
-    customSiteTitle: 'StockFlow API Documentation',
-  });
+  if (enableSwagger) {
+    const config = new DocumentBuilder()
+      .setTitle('StockFlow API')
+      .setDescription('API documentation for StockFlow SaaS - Inventory Management System')
+      .setVersion('1.0')
+      .addBearerAuth(
+        {
+          type: 'http',
+          scheme: 'bearer',
+          bearerFormat: 'JWT',
+          name: 'JWT',
+          description: 'Enter JWT token',
+          in: 'header',
+        },
+        'JWT-auth',
+      )
+      .addTag('health', 'Health check and system status endpoints')
+      .addTag('auth', 'Authentication endpoints for login, register, and token management')
+      .addTag('users', 'User management endpoints')
+      .addTag('products', 'Product management endpoints')
+      .addTag('categories', 'Product category management endpoints')
+      .addTag('warehouses', 'Warehouse management endpoints')
+      .addTag('customers', 'Customer management endpoints')
+      .addTag('invoices', 'Invoice management endpoints')
+      .addTag('payments', 'Payment management endpoints')
+      .addTag('stock-movements', 'Stock movement tracking endpoints')
+      .addTag('dashboard', 'Dashboard analytics and metrics endpoints')
+      .addTag('reports', 'Report generation endpoints')
+      .addTag('notifications', 'Notification management endpoints')
+      .addTag('subscriptions', 'Subscription and billing management endpoints')
+      .addTag('audit', 'Audit log endpoints for activity tracking')
+      .addTag('upload', 'File upload endpoints')
+      .build();
+
+    const document = SwaggerModule.createDocument(app, config);
+    SwaggerModule.setup('api/docs', app, document, {
+      swaggerOptions: {
+        persistAuthorization: true,
+        tagsSorter: 'alpha',
+        operationsSorter: 'alpha',
+      },
+      customSiteTitle: 'StockFlow API Documentation',
+    });
+
+    logger.log('Swagger documentation enabled at /api/docs');
+  } else {
+    logger.log('Swagger documentation disabled in production');
+  }
 
   const port = process.env.PORT ?? 3000;
   await app.listen(port);
 
   logger.log(`Application is running on: http://localhost:${port}`);
-  logger.log(`Swagger documentation available at: http://localhost:${port}/api/docs`);
+  logger.log(`Environment: ${process.env.NODE_ENV ?? 'development'}`);
+  logger.log(`Trust proxy: ${isProduction ? 'enabled' : 'disabled'}`);
+  logger.log('Compression: enabled (gzip, level 6, threshold 1KB)');
+  logger.log('Security headers: enabled (helmet)');
+  logger.log('Graceful shutdown: enabled');
 }
 void bootstrap();

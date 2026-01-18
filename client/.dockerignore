@@ -1,0 +1,169 @@
+# =============================================================================
+# StockFlow Client - Docker Ignore File
+# =============================================================================
+# Files and directories to exclude from the Docker build context.
+# This improves build performance and reduces image size by excluding
+# unnecessary files from being sent to the Docker daemon.
+#
+# IMPORTANT: Keep this file in sync with .gitignore but with Docker-specific
+# additions for build optimization.
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Dependencies
+# -----------------------------------------------------------------------------
+# Exclude node_modules entirely - we install fresh in Docker for consistency
+# This is critical because:
+# 1. node_modules can be huge (100MB+)
+# 2. Native bindings may not work across different OS/architectures
+# 3. We want reproducible builds using package-lock.json
+node_modules
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnp
+.pnp.js
+.yarn/*
+
+# -----------------------------------------------------------------------------
+# Build Outputs
+# -----------------------------------------------------------------------------
+# Exclude existing build artifacts - we build fresh in Docker
+build
+dist
+.cache
+
+# Generated React Router types - regenerated during build
+.react-router
+
+# Test coverage reports
+coverage
+.nyc_output
+
+# -----------------------------------------------------------------------------
+# Development Configuration
+# -----------------------------------------------------------------------------
+# These files are only needed for local development
+*.md
+!README.md
+.editorconfig
+.prettierrc*
+.eslintrc*
+.eslintignore
+eslint.config.*
+
+# Vite cache
+.vite
+
+# TypeScript build info
+*.tsbuildinfo
+
+# -----------------------------------------------------------------------------
+# IDE and Editor Files
+# -----------------------------------------------------------------------------
+# Editor-specific files that shouldn't be in the image
+.idea
+.vscode
+*.swp
+*.swo
+*~
+*.sublime-*
+
+# -----------------------------------------------------------------------------
+# Environment and Secrets
+# -----------------------------------------------------------------------------
+# NEVER include secrets in Docker images
+# Environment variables should be passed at runtime
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.cert
+
+# -----------------------------------------------------------------------------
+# Git
+# -----------------------------------------------------------------------------
+# Git history is not needed in the image
+.git
+.gitignore
+.gitattributes
+.github
+
+# -----------------------------------------------------------------------------
+# Testing
+# -----------------------------------------------------------------------------
+# Test files are not needed in production
+test
+tests
+__tests__
+__mocks__
+*.spec.ts
+*.spec.tsx
+*.test.ts
+*.test.tsx
+vitest.config.*
+jest.config.*
+playwright.config.*
+cypress
+cypress.config.*
+
+# -----------------------------------------------------------------------------
+# Docker
+# -----------------------------------------------------------------------------
+# Avoid recursively copying Docker files
+Dockerfile*
+docker-compose*
+.docker
+.dockerignore
+
+# -----------------------------------------------------------------------------
+# Logs
+# -----------------------------------------------------------------------------
+logs
+*.log
+
+# -----------------------------------------------------------------------------
+# OS Files
+# -----------------------------------------------------------------------------
+# Operating system artifacts
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# -----------------------------------------------------------------------------
+# Temporary Files
+# -----------------------------------------------------------------------------
+tmp
+temp
+*.tmp
+*.temp
+*.bak
+
+# -----------------------------------------------------------------------------
+# Documentation
+# -----------------------------------------------------------------------------
+# Documentation is not needed in production runtime
+docs
+*.md
+!README.md
+
+# -----------------------------------------------------------------------------
+# Miscellaneous
+# -----------------------------------------------------------------------------
+# Storybook (if used)
+.storybook
+storybook-static
+
+# Public assets that shouldn't be copied (if any)
+# Uncomment if needed:
+# public/mock-data
+
+# Local scripts
+scripts
+*.sh
+!docker-entrypoint.sh
