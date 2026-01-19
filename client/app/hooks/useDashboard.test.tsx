@@ -7,6 +7,7 @@ import {
   useDashboardCharts,
   useRecentInvoices,
   useLowStockAlerts,
+  useRecentActivity,
   useDashboard,
 } from './useDashboard';
 import { dashboardService } from '~/services/dashboard.service';
@@ -15,6 +16,7 @@ import type {
   DashboardCharts,
   RecentInvoice,
   LowStockAlert,
+  RecentActivity,
 } from '~/services/dashboard.service';
 
 // Mock the dashboard service
@@ -24,6 +26,7 @@ vi.mock('~/services/dashboard.service', () => ({
     getCharts: vi.fn(),
     getRecentInvoices: vi.fn(),
     getLowStockAlerts: vi.fn(),
+    getRecentActivity: vi.fn(),
   },
 }));
 
@@ -36,12 +39,13 @@ const mockStats: DashboardStats = {
   invoicesGrowth: 8.1,
   totalCustomers: 342,
   customersGrowth: 5.7,
+  overdueInvoicesCount: 3,
 };
 
 const mockCharts: DashboardCharts = {
   salesChart: [
-    { date: '2024-01-01', sales: 4500000, orders: 45 },
-    { date: '2024-01-02', sales: 5200000, orders: 52 },
+    { date: '2024-01-01', sales: 4500000, orders: 45, previousPeriod: 4200000 },
+    { date: '2024-01-02', sales: 5200000, orders: 52, previousPeriod: 4800000 },
   ],
   categoryDistribution: [
     { name: 'Electronica', value: 35, color: '#3B82F6' },
@@ -51,6 +55,11 @@ const mockCharts: DashboardCharts = {
     { id: '1', name: 'iPhone 15 Pro', category: 'Electronica', sales: 45000000, quantity: 150 },
   ],
 };
+
+const mockActivity: RecentActivity[] = [
+  { id: '1', type: 'sale', title: 'Nueva venta', description: 'Venta completada', timestamp: '2024-01-14T10:00:00Z' },
+  { id: '2', type: 'product', title: 'Stock actualizado', description: 'iPhone 15 Pro', timestamp: '2024-01-14T09:00:00Z' },
+];
 
 const mockInvoices: RecentInvoice[] = [
   { id: '1', number: 'INV-001', customer: 'Company A', amount: 4500000, status: 'PAID', date: '2024-01-14' },
@@ -239,12 +248,40 @@ describe('useDashboard hooks', () => {
     });
   });
 
+  describe('useRecentActivity', () => {
+    it('should return activity data on success', async () => {
+      vi.mocked(dashboardService.getRecentActivity).mockResolvedValue(mockActivity);
+
+      const { result } = renderHook(() => useRecentActivity(), {
+        wrapper: createWrapper(),
+      });
+
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false);
+      });
+
+      expect(result.current.data).toEqual(mockActivity);
+      expect(result.current.data?.length).toBe(2);
+    });
+
+    it('should call dashboardService.getRecentActivity', async () => {
+      vi.mocked(dashboardService.getRecentActivity).mockResolvedValue(mockActivity);
+
+      renderHook(() => useRecentActivity(), {
+        wrapper: createWrapper(),
+      });
+
+      expect(dashboardService.getRecentActivity).toHaveBeenCalled();
+    });
+  });
+
   describe('useDashboard', () => {
     it('should return loading true when any query is loading', () => {
       vi.mocked(dashboardService.getStats).mockReturnValue(new Promise(() => {}));
       vi.mocked(dashboardService.getCharts).mockResolvedValue(mockCharts);
       vi.mocked(dashboardService.getRecentInvoices).mockResolvedValue(mockInvoices);
       vi.mocked(dashboardService.getLowStockAlerts).mockResolvedValue(mockAlerts);
+      vi.mocked(dashboardService.getRecentActivity).mockResolvedValue(mockActivity);
 
       const { result } = renderHook(() => useDashboard(), {
         wrapper: createWrapper(),
@@ -258,6 +295,7 @@ describe('useDashboard hooks', () => {
       vi.mocked(dashboardService.getCharts).mockResolvedValue(mockCharts);
       vi.mocked(dashboardService.getRecentInvoices).mockResolvedValue(mockInvoices);
       vi.mocked(dashboardService.getLowStockAlerts).mockResolvedValue(mockAlerts);
+      vi.mocked(dashboardService.getRecentActivity).mockResolvedValue(mockActivity);
 
       const { result } = renderHook(() => useDashboard(), {
         wrapper: createWrapper(),
@@ -271,6 +309,7 @@ describe('useDashboard hooks', () => {
       expect(result.current.charts).toEqual(mockCharts);
       expect(result.current.recentInvoices).toEqual(mockInvoices);
       expect(result.current.lowStockAlerts).toEqual(mockAlerts);
+      expect(result.current.recentActivity).toEqual(mockActivity);
       expect(result.current.isError).toBe(false);
     });
 
@@ -279,6 +318,7 @@ describe('useDashboard hooks', () => {
       vi.mocked(dashboardService.getCharts).mockResolvedValue(mockCharts);
       vi.mocked(dashboardService.getRecentInvoices).mockResolvedValue(mockInvoices);
       vi.mocked(dashboardService.getLowStockAlerts).mockResolvedValue(mockAlerts);
+      vi.mocked(dashboardService.getRecentActivity).mockResolvedValue(mockActivity);
 
       const { result } = renderHook(() => useDashboard(), {
         wrapper: createWrapper(),
@@ -298,6 +338,7 @@ describe('useDashboard hooks', () => {
       vi.mocked(dashboardService.getCharts).mockRejectedValue(new Error('Charts error'));
       vi.mocked(dashboardService.getRecentInvoices).mockResolvedValue(mockInvoices);
       vi.mocked(dashboardService.getLowStockAlerts).mockResolvedValue(mockAlerts);
+      vi.mocked(dashboardService.getRecentActivity).mockResolvedValue(mockActivity);
 
       const { result } = renderHook(() => useDashboard(), {
         wrapper: createWrapper(),
@@ -317,6 +358,7 @@ describe('useDashboard hooks', () => {
       vi.mocked(dashboardService.getCharts).mockResolvedValue(mockCharts);
       vi.mocked(dashboardService.getRecentInvoices).mockResolvedValue(mockInvoices);
       vi.mocked(dashboardService.getLowStockAlerts).mockResolvedValue(mockAlerts);
+      vi.mocked(dashboardService.getRecentActivity).mockResolvedValue(mockActivity);
 
       const { result } = renderHook(() => useDashboard(), {
         wrapper: createWrapper(),
@@ -337,6 +379,7 @@ describe('useDashboard hooks', () => {
         expect(dashboardService.getCharts).toHaveBeenCalled();
         expect(dashboardService.getRecentInvoices).toHaveBeenCalled();
         expect(dashboardService.getLowStockAlerts).toHaveBeenCalled();
+        expect(dashboardService.getRecentActivity).toHaveBeenCalled();
       });
     });
 
@@ -345,6 +388,7 @@ describe('useDashboard hooks', () => {
       vi.mocked(dashboardService.getCharts).mockResolvedValue(mockCharts);
       vi.mocked(dashboardService.getRecentInvoices).mockResolvedValue(mockInvoices);
       vi.mocked(dashboardService.getLowStockAlerts).mockResolvedValue(mockAlerts);
+      vi.mocked(dashboardService.getRecentActivity).mockResolvedValue(mockActivity);
 
       const { result } = renderHook(() => useDashboard(), {
         wrapper: createWrapper(),
@@ -358,6 +402,7 @@ describe('useDashboard hooks', () => {
       expect(result.current.charts).toEqual(mockCharts);
       expect(result.current.recentInvoices).toEqual(mockInvoices);
       expect(result.current.lowStockAlerts).toEqual(mockAlerts);
+      expect(result.current.recentActivity).toEqual(mockActivity);
     });
   });
 });

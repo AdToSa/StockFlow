@@ -110,6 +110,7 @@ export const queryKeys = {
     all: ['dashboard'] as const,
     stats: () => [...queryKeys.dashboard.all, 'stats'] as const,
     charts: () => [...queryKeys.dashboard.all, 'charts'] as const,
+    activity: () => [...queryKeys.dashboard.all, 'activity'] as const,
   },
 
   // Reports

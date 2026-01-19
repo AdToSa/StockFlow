@@ -6,6 +6,7 @@ import type {
   DashboardCharts,
   RecentInvoice,
   LowStockAlert,
+  RecentActivity,
 } from '~/services/dashboard.service';
 
 export function useDashboardStats() {
@@ -41,35 +42,48 @@ export function useLowStockAlerts() {
   });
 }
 
+export function useRecentActivity() {
+  return useQuery<RecentActivity[]>({
+    queryKey: queryKeys.dashboard.activity(),
+    queryFn: dashboardService.getRecentActivity,
+    staleTime: 1000 * 60 * 2, // 2 minutes
+  });
+}
+
 export function useDashboard() {
   const statsQuery = useDashboardStats();
   const chartsQuery = useDashboardCharts();
   const invoicesQuery = useRecentInvoices();
   const alertsQuery = useLowStockAlerts();
+  const activityQuery = useRecentActivity();
 
   const isLoading =
     statsQuery.isLoading ||
     chartsQuery.isLoading ||
     invoicesQuery.isLoading ||
-    alertsQuery.isLoading;
+    alertsQuery.isLoading ||
+    activityQuery.isLoading;
 
   const isError =
     statsQuery.isError ||
     chartsQuery.isError ||
     invoicesQuery.isError ||
-    alertsQuery.isError;
+    alertsQuery.isError ||
+    activityQuery.isError;
 
   const error =
     statsQuery.error ||
     chartsQuery.error ||
     invoicesQuery.error ||
-    alertsQuery.error;
+    alertsQuery.error ||
+    activityQuery.error;
 
   return {
     stats: statsQuery.data,
     charts: chartsQuery.data,
     recentInvoices: invoicesQuery.data,
     lowStockAlerts: alertsQuery.data,
+    recentActivity: activityQuery.data,
     isLoading,
     isError,
     error,
@@ -78,6 +92,7 @@ export function useDashboard() {
       chartsQuery.refetch();
       invoicesQuery.refetch();
       alertsQuery.refetch();
+      activityQuery.refetch();
     },
   };
 }

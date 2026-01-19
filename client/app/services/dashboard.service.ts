@@ -10,12 +10,14 @@ export interface DashboardStats {
   invoicesGrowth: number;
   totalCustomers: number;
   customersGrowth: number;
+  overdueInvoicesCount: number;
 }
 
 export interface SalesChartData {
   date: string;
   sales: number;
   orders: number;
+  previousPeriod: number;
 }
 
 export interface CategoryDistribution {
@@ -51,6 +53,17 @@ export interface LowStockAlert {
   warehouse: string;
 }
 
+export type ActivityType = 'sale' | 'product' | 'customer' | 'invoice' | 'stock';
+
+export interface RecentActivity {
+  id: string;
+  type: ActivityType;
+  title: string;
+  description: string;
+  timestamp: string;
+  metadata?: Record<string, unknown>;
+}
+
 export interface DashboardCharts {
   salesChart: SalesChartData[];
   categoryDistribution: CategoryDistribution[];
@@ -62,6 +75,7 @@ export interface DashboardData {
   charts: DashboardCharts;
   recentInvoices: RecentInvoice[];
   lowStockAlerts: LowStockAlert[];
+  recentActivity: RecentActivity[];
 }
 
 // Mock data for development
@@ -74,23 +88,69 @@ const mockStats: DashboardStats = {
   invoicesGrowth: 8.1,
   totalCustomers: 342,
   customersGrowth: 5.7,
+  overdueInvoicesCount: 3,
 };
 
 const mockSalesChart: SalesChartData[] = [
-  { date: '2024-01-01', sales: 4500000, orders: 45 },
-  { date: '2024-01-02', sales: 5200000, orders: 52 },
-  { date: '2024-01-03', sales: 4800000, orders: 48 },
-  { date: '2024-01-04', sales: 6100000, orders: 61 },
-  { date: '2024-01-05', sales: 5500000, orders: 55 },
-  { date: '2024-01-06', sales: 7200000, orders: 72 },
-  { date: '2024-01-07', sales: 6800000, orders: 68 },
-  { date: '2024-01-08', sales: 5900000, orders: 59 },
-  { date: '2024-01-09', sales: 6400000, orders: 64 },
-  { date: '2024-01-10', sales: 7100000, orders: 71 },
-  { date: '2024-01-11', sales: 6600000, orders: 66 },
-  { date: '2024-01-12', sales: 7800000, orders: 78 },
-  { date: '2024-01-13', sales: 8200000, orders: 82 },
-  { date: '2024-01-14', sales: 7500000, orders: 75 },
+  { date: '2024-01-01', sales: 4500000, orders: 45, previousPeriod: 4200000 },
+  { date: '2024-01-02', sales: 5200000, orders: 52, previousPeriod: 4800000 },
+  { date: '2024-01-03', sales: 4800000, orders: 48, previousPeriod: 4500000 },
+  { date: '2024-01-04', sales: 6100000, orders: 61, previousPeriod: 5500000 },
+  { date: '2024-01-05', sales: 5500000, orders: 55, previousPeriod: 5200000 },
+  { date: '2024-01-06', sales: 7200000, orders: 72, previousPeriod: 6500000 },
+  { date: '2024-01-07', sales: 6800000, orders: 68, previousPeriod: 6200000 },
+  { date: '2024-01-08', sales: 5900000, orders: 59, previousPeriod: 5400000 },
+  { date: '2024-01-09', sales: 6400000, orders: 64, previousPeriod: 5800000 },
+  { date: '2024-01-10', sales: 7100000, orders: 71, previousPeriod: 6400000 },
+  { date: '2024-01-11', sales: 6600000, orders: 66, previousPeriod: 6100000 },
+  { date: '2024-01-12', sales: 7800000, orders: 78, previousPeriod: 7000000 },
+  { date: '2024-01-13', sales: 8200000, orders: 82, previousPeriod: 7500000 },
+  { date: '2024-01-14', sales: 7500000, orders: 75, previousPeriod: 6800000 },
+];
+
+const mockRecentActivity: RecentActivity[] = [
+  {
+    id: '1',
+    type: 'sale',
+    title: 'Nueva venta completada',
+    description: 'Venta de $4,500,000 a Tecnologia Global S.A.S',
+    timestamp: new Date(Date.now() - 1000 * 60 * 15).toISOString(),
+  },
+  {
+    id: '2',
+    type: 'product',
+    title: 'Stock actualizado',
+    description: 'iPhone 15 Pro - Stock aumentado a 150 unidades',
+    timestamp: new Date(Date.now() - 1000 * 60 * 45).toISOString(),
+  },
+  {
+    id: '3',
+    type: 'customer',
+    title: 'Nuevo cliente registrado',
+    description: 'Distribuidora del Pacifico S.A.',
+    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(),
+  },
+  {
+    id: '4',
+    type: 'invoice',
+    title: 'Factura pagada',
+    description: 'INV-2024-0123 - $6,200,000',
+    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 3).toISOString(),
+  },
+  {
+    id: '5',
+    type: 'stock',
+    title: 'Alerta de stock bajo',
+    description: 'Monitor Dell 27" - Solo 2 unidades disponibles',
+    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 5).toISOString(),
+  },
+  {
+    id: '6',
+    type: 'sale',
+    title: 'Pedido procesado',
+    description: 'Pedido #2024-0856 enviado a bodega',
+    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 8).toISOString(),
+  },
 ];
 
 const mockCategoryDistribution: CategoryDistribution[] = [
@@ -170,14 +230,25 @@ export const dashboardService = {
     return mockLowStockAlerts;
   },
 
+  async getRecentActivity(): Promise<RecentActivity[]> {
+    // In production, uncomment this:
+    // const { data } = await api.get<RecentActivity[]>('/dashboard/recent-activity');
+    // return data;
+
+    // Mock data for development
+    await new Promise(resolve => setTimeout(resolve, 450));
+    return mockRecentActivity;
+  },
+
   async getAll(): Promise<DashboardData> {
-    const [stats, charts, recentInvoices, lowStockAlerts] = await Promise.all([
+    const [stats, charts, recentInvoices, lowStockAlerts, recentActivity] = await Promise.all([
       this.getStats(),
       this.getCharts(),
       this.getRecentInvoices(),
       this.getLowStockAlerts(),
+      this.getRecentActivity(),
     ]);
 
-    return { stats, charts, recentInvoices, lowStockAlerts };
+    return { stats, charts, recentInvoices, lowStockAlerts, recentActivity };
   },
 };
