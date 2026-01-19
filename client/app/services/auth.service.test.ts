@@ -1,6 +1,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { authService } from './auth.service';
-import { api, setAccessToken, getAccessToken } from '~/lib/api';
+import {
+  api,
+  setAccessToken,
+  getAccessToken,
+  setRefreshToken,
+  getRefreshToken,
+} from '~/lib/api';
 import type { User, Tenant } from '~/stores/auth.store';
 
 // Mock the api module
@@ -11,6 +17,8 @@ vi.mock('~/lib/api', () => ({
   },
   setAccessToken: vi.fn(),
   getAccessToken: vi.fn(),
+  setRefreshToken: vi.fn(),
+  getRefreshToken: vi.fn(),
 }));
 
 const mockUser: User = {
@@ -35,6 +43,7 @@ const mockAuthResponse = {
   user: mockUser,
   tenant: mockTenant,
   accessToken: 'mock-access-token',
+  refreshToken: 'mock-refresh-token',
 };
 
 describe('authService', () => {
@@ -63,6 +72,15 @@ describe('authService', () => {
       await authService.login(credentials);
 
       expect(setAccessToken).toHaveBeenCalledWith('mock-access-token');
+    });
+
+    it('should set refresh token on successful login', async () => {
+      const credentials = { email: 'test@example.com', password: 'password123' };
+      vi.mocked(api.post).mockResolvedValueOnce({ data: mockAuthResponse });
+
+      await authService.login(credentials);
+
+      expect(setRefreshToken).toHaveBeenCalledWith('mock-refresh-token');
     });
 
     it('should return auth response on successful login', async () => {
@@ -130,12 +148,15 @@ describe('authService', () => {
   });
 
   describe('logout', () => {
-    it('should call api.post to logout endpoint', async () => {
+    it('should call api.post to logout endpoint with refresh token', async () => {
+      vi.mocked(getRefreshToken).mockReturnValue('stored-refresh-token');
       vi.mocked(api.post).mockResolvedValueOnce({ data: {} });
 
       await authService.logout();
 
-      expect(api.post).toHaveBeenCalledWith('/auth/logout');
+      expect(api.post).toHaveBeenCalledWith('/auth/logout', {
+        refreshToken: 'stored-refresh-token',
+      });
     });
 
     it('should clear access token on successful logout', async () => {
@@ -146,13 +167,22 @@ describe('authService', () => {
       expect(setAccessToken).toHaveBeenCalledWith(null);
     });
 
-    it('should clear access token even if api call fails', async () => {
+    it('should clear refresh token on successful logout', async () => {
+      vi.mocked(api.post).mockResolvedValueOnce({ data: {} });
+
+      await authService.logout();
+
+      expect(setRefreshToken).toHaveBeenCalledWith(null);
+    });
+
+    it('should clear tokens even if api call fails', async () => {
       vi.mocked(api.post).mockRejectedValueOnce(new Error('Network error'));
 
-      // The error is still thrown after finally runs, but setAccessToken should be called
+      // The error is still thrown after finally runs, but tokens should be cleared
       await expect(authService.logout()).rejects.toThrow('Network error');
 
       expect(setAccessToken).toHaveBeenCalledWith(null);
+      expect(setRefreshToken).toHaveBeenCalledWith(null);
     });
   });
 

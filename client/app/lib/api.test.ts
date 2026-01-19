@@ -56,12 +56,19 @@ vi.mock('axios', () => ({
 }));
 
 // Import api after mocking
-import { api, setAccessToken, getAccessToken } from './api';
+import {
+  api,
+  setAccessToken,
+  getAccessToken,
+  setRefreshToken,
+  getRefreshToken,
+} from './api';
 
 describe('API client', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     setAccessToken(null);
+    setRefreshToken(null);
     // Reset window.location mock
     Object.defineProperty(window, 'location', {
       value: { href: '' },
@@ -245,7 +252,8 @@ describe('API client', () => {
       await expect(interceptorHandlers.responseError!(error)).rejects.toBe(error);
     });
 
-    it('attempts token refresh on 401 error', async () => {
+    it('attempts token refresh on 401 error when refresh token exists', async () => {
+      setRefreshToken('stored-refresh-token');
       const newToken = 'new-refreshed-token';
       mockAxiosPost.mockResolvedValueOnce({
         data: { accessToken: newToken },
@@ -267,12 +275,29 @@ describe('API client', () => {
 
       expect(mockAxiosPost).toHaveBeenCalledWith(
         'http://localhost:3000/auth/refresh',
-        {},
+        { refreshToken: 'stored-refresh-token' },
         { withCredentials: true }
       );
     });
 
+    it('rejects 401 error when no refresh token available', async () => {
+      // No refresh token set
+      const error = {
+        response: { status: 401 },
+        config: { headers: {}, url: '/protected' },
+        isAxiosError: true,
+        message: 'Unauthorized',
+        name: 'AxiosError',
+        toJSON: () => ({}),
+      } as AxiosError;
+
+      await expect(interceptorHandlers.responseError!(error)).rejects.toThrow(
+        'No refresh token available'
+      );
+    });
+
     it('sets new token after successful refresh', async () => {
+      setRefreshToken('stored-refresh-token');
       const newToken = 'fresh-token-abc';
       mockAxiosPost.mockResolvedValueOnce({
         data: { accessToken: newToken },
@@ -295,6 +320,7 @@ describe('API client', () => {
     });
 
     it('redirects to login when refresh fails', async () => {
+      setRefreshToken('stored-refresh-token');
       mockAxiosPost.mockRejectedValueOnce(new Error('Refresh failed'));
 
       const error = {
@@ -311,8 +337,9 @@ describe('API client', () => {
       expect(window.location.href).toBe('/login');
     });
 
-    it('clears token when refresh fails', async () => {
+    it('clears tokens when refresh fails', async () => {
       setAccessToken('old-token');
+      setRefreshToken('stored-refresh-token');
       mockAxiosPost.mockRejectedValueOnce(new Error('Refresh failed'));
 
       const error = {
@@ -327,9 +354,11 @@ describe('API client', () => {
       await expect(interceptorHandlers.responseError!(error)).rejects.toThrow('Refresh failed');
 
       expect(getAccessToken()).toBeNull();
+      expect(getRefreshToken()).toBeNull();
     });
 
     it('updates Authorization header on retry request', async () => {
+      setRefreshToken('stored-refresh-token');
       const newToken = 'retry-token';
       mockAxiosPost.mockResolvedValueOnce({
         data: { accessToken: newToken },
@@ -355,6 +384,7 @@ describe('API client', () => {
     });
 
     it('marks request as retry to prevent infinite loop', async () => {
+      setRefreshToken('stored-refresh-token');
       const newToken = 'new-token';
       mockAxiosPost.mockResolvedValueOnce({
         data: { accessToken: newToken },
@@ -390,6 +420,7 @@ describe('API client', () => {
     });
 
     it('retries the original request after successful token refresh', async () => {
+      setRefreshToken('stored-refresh-token');
       const newToken = 'new-token-xyz';
       mockAxiosPost.mockResolvedValueOnce({
         data: { accessToken: newToken },

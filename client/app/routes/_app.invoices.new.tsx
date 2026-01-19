@@ -1,53 +1,61 @@
-import { useState, useEffect, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useState, useEffect, useCallback } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Maximize2,
   Minimize2,
   ArrowLeft,
   ShoppingCart,
   Package,
-} from 'lucide-react';
-import { Link } from 'react-router';
-import type { Route } from './+types/_app.invoices.new';
-import { cn, formatCurrency } from '~/lib/utils';
-import { getTodayDate, getDateFromNow } from '~/lib/pos-utils';
-import { useCreateInvoice } from '~/hooks/useInvoices';
-import { useCustomers } from '~/hooks/useCustomers';
-import { useProducts } from '~/hooks/useProducts';
-import { useCategories } from '~/hooks/useCategories';
-import { usePOSCart } from '~/hooks/usePOSCart';
-import { Button } from '~/components/ui/Button';
-import { ThemeToggle } from '~/components/ui/ThemeToggle';
-import { toast } from '~/components/ui/Toast';
+} from "lucide-react";
+import { Link } from "react-router";
+import type { Route } from "./+types/_app.invoices.new";
+import { cn, formatCurrency } from "~/lib/utils";
+import { getTodayDate, getDateFromNow } from "~/lib/pos-utils";
+import { useCreateInvoice } from "~/hooks/useInvoices";
+import { useCustomers } from "~/hooks/useCustomers";
+import { useProducts } from "~/hooks/useProducts";
+import { useCategories } from "~/hooks/useCategories";
+import { usePOSCart } from "~/hooks/usePOSCart";
+import { Button } from "~/components/ui/Button";
+import { ThemeToggle } from "~/components/ui/ThemeToggle";
+import { toast } from "~/components/ui/Toast";
 import {
   ProductCatalog,
   CartPanel,
   QuickSearch,
   CustomerSelect,
-} from '~/components/pos';
-import type { InvoiceStatus } from '~/types/invoice';
+} from "~/components/pos";
+import type { InvoiceStatus } from "~/types/invoice";
 
 // Meta for SEO
 export const meta: Route.MetaFunction = () => {
   return [
-    { title: 'Punto de Venta - StockFlow' },
-    { name: 'description', content: 'Sistema de punto de venta para facturacion rapida' },
+    { title: "Punto de Venta - StockFlow" },
+    {
+      name: "description",
+      content: "Sistema de punto de venta para facturacion rapida",
+    },
   ];
 };
 
 // Mobile tab type
-type MobileTab = 'products' | 'cart';
+type MobileTab = "products" | "cart";
 
 export default function POSPage() {
   // SSR-safe state for client-only features
   const [isMounted, setIsMounted] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [mobileTab, setMobileTab] = useState<MobileTab>('products');
+  const [mobileTab, setMobileTab] = useState<MobileTab>("products");
 
   // Data queries
-  const { data: customersData, isLoading: isLoadingCustomers } = useCustomers({ limit: 100 });
-  const { data: productsData, isLoading: isLoadingProducts } = useProducts({ limit: 200 });
-  const { data: categoriesData, isLoading: isLoadingCategories } = useCategories();
+  const { data: customersData, isLoading: isLoadingCustomers } = useCustomers({
+    limit: 100,
+  });
+  const { data: productsData, isLoading: isLoadingProducts } = useProducts({
+    limit: 200,
+  });
+  const { data: categoriesData, isLoading: isLoadingCategories } =
+    useCategories();
   const createInvoice = useCreateInvoice();
 
   // POS Cart hook
@@ -97,18 +105,19 @@ export default function POSPage() {
       setIsFullscreen(!!document.fullscreenElement);
     };
 
-    document.addEventListener('fullscreenchange', handleFullscreenChange);
-    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    return () =>
+      document.removeEventListener("fullscreenchange", handleFullscreenChange);
   }, []);
 
   // Handle checkout
   const handleCheckout = useCallback(
-    (status: 'PENDING' | 'PAID') => {
+    (status: "PENDING" | "PAID") => {
       if (!canCheckout) {
         if (!selectedCustomerId) {
-          toast.error('Selecciona un cliente para continuar');
+          toast.error("Selecciona un cliente para continuar");
         } else if (cart.length === 0) {
-          toast.error('Agrega productos al carrito');
+          toast.error("Agrega productos al carrito");
         }
         return;
       }
@@ -139,7 +148,7 @@ export default function POSPage() {
           onError: () => {
             setProcessing(false);
           },
-        }
+        },
       );
     },
     [
@@ -150,13 +159,13 @@ export default function POSPage() {
       createInvoice,
       setProcessing,
       resetState,
-    ]
+    ],
   );
 
   // Handle clear cart with confirmation
   const handleClearCart = useCallback(() => {
     clearCart();
-    toast.info('Carrito limpiado');
+    toast.info("Carrito limpiado");
   }, [clearCart]);
 
   // Keyboard shortcuts
@@ -165,42 +174,42 @@ export default function POSPage() {
       // Skip if typing in an input
       const target = e.target as HTMLElement;
       if (
-        target.tagName === 'INPUT' ||
-        target.tagName === 'TEXTAREA' ||
+        target.tagName === "INPUT" ||
+        target.tagName === "TEXTAREA" ||
         target.isContentEditable
       ) {
         return;
       }
 
       switch (e.key) {
-        case 'F4':
+        case "F4":
           e.preventDefault();
-          handleCheckout('PAID');
+          handleCheckout("PAID");
           break;
-        case 'F8':
+        case "F8":
           e.preventDefault();
-          handleCheckout('PENDING');
+          handleCheckout("PENDING");
           break;
-        case 'F9':
+        case "F9":
           e.preventDefault();
           if (cart.length > 0) {
             handleClearCart();
           }
           break;
-        case 'F11':
+        case "F11":
           e.preventDefault();
           toggleFullscreen();
           break;
-        case 'Escape':
+        case "Escape":
           if (searchQuery) {
-            setSearchQuery('');
+            setSearchQuery("");
           }
           break;
       }
     };
 
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
   }, [
     handleCheckout,
     handleClearCart,
@@ -260,7 +269,11 @@ export default function POSPage() {
                 variant="ghost"
                 size="icon"
                 onClick={toggleFullscreen}
-                title={isFullscreen ? 'Salir pantalla completa (F11)' : 'Pantalla completa (F11)'}
+                title={
+                  isFullscreen
+                    ? "Salir pantalla completa (F11)"
+                    : "Pantalla completa (F11)"
+                }
               >
                 {isFullscreen ? (
                   <Minimize2 className="h-5 w-5" />
@@ -332,12 +345,12 @@ export default function POSPage() {
           <div className="flex shrink-0 border-b border-neutral-200 bg-white dark:border-neutral-700 dark:bg-neutral-900">
             <button
               type="button"
-              onClick={() => setMobileTab('products')}
+              onClick={() => setMobileTab("products")}
               className={cn(
-                'flex flex-1 items-center justify-center gap-2 px-4 py-3 text-sm font-medium transition-colors',
-                mobileTab === 'products'
-                  ? 'border-b-2 border-primary-600 text-primary-600'
-                  : 'text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300'
+                "flex flex-1 items-center justify-center gap-2 px-4 py-3 text-sm font-medium transition-colors",
+                mobileTab === "products"
+                  ? "border-b-2 border-primary-600 text-primary-600"
+                  : "text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300",
               )}
             >
               <Package className="h-5 w-5" />
@@ -345,12 +358,12 @@ export default function POSPage() {
             </button>
             <button
               type="button"
-              onClick={() => setMobileTab('cart')}
+              onClick={() => setMobileTab("cart")}
               className={cn(
-                'relative flex flex-1 items-center justify-center gap-2 px-4 py-3 text-sm font-medium transition-colors',
-                mobileTab === 'cart'
-                  ? 'border-b-2 border-primary-600 text-primary-600'
-                  : 'text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300'
+                "relative flex flex-1 items-center justify-center gap-2 px-4 py-3 text-sm font-medium transition-colors",
+                mobileTab === "cart"
+                  ? "border-b-2 border-primary-600 text-primary-600"
+                  : "text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300",
               )}
             >
               <ShoppingCart className="h-5 w-5" />
@@ -366,7 +379,7 @@ export default function POSPage() {
           {/* Mobile Content */}
           <div className="flex-1 overflow-hidden">
             <AnimatePresence mode="wait">
-              {mobileTab === 'products' ? (
+              {mobileTab === "products" ? (
                 <motion.div
                   key="products"
                   initial={{ opacity: 0, x: -20 }}
@@ -421,7 +434,7 @@ export default function POSPage() {
           </div>
 
           {/* Mobile Cart Summary Bar (when on products tab) */}
-          {mobileTab === 'products' && cart.length > 0 && (
+          {mobileTab === "products" && cart.length > 0 && (
             <motion.div
               initial={{ y: 100 }}
               animate={{ y: 0 }}
@@ -429,13 +442,14 @@ export default function POSPage() {
             >
               <button
                 type="button"
-                onClick={() => setMobileTab('cart')}
+                onClick={() => setMobileTab("cart")}
                 className="flex w-full items-center justify-between rounded-xl bg-primary-600 px-4 py-3 text-white shadow-lg transition-colors hover:bg-primary-700"
               >
                 <div className="flex items-center gap-3">
                   <ShoppingCart className="h-5 w-5" />
                   <span className="font-medium">
-                    {totals.itemCount} {totals.itemCount === 1 ? 'item' : 'items'}
+                    {totals.itemCount}{" "}
+                    {totals.itemCount === 1 ? "item" : "items"}
                   </span>
                 </div>
                 <span className="text-lg font-bold">
