@@ -44,3 +44,4 @@ yarn-error.log*
 # /client/docs
 # ROADMAP_BACKEND_STOCKFLOW_ENGLISH.md
 # ROADMAP_FRONTEND_STOCKFLOW_ENGLISH.md
+/server/docs
