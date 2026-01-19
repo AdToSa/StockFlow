@@ -36,7 +36,14 @@ export const ProductCard = memo(function ProductCard({
       disabled={isDisabled}
       whileTap={!isDisabled ? { scale: 0.97 } : undefined}
       className={cn(
-        'relative flex flex-col overflow-hidden rounded-2xl border p-4 text-left transition-all',
+        // Base styles - mobile-first with compact padding
+        // min-w-0 is CRUCIAL for flex/grid children to allow shrinking below content size
+        // w-full ensures card takes full grid cell width
+        'relative flex w-full min-w-0 flex-col rounded-xl border text-left transition-all',
+        // Padding: compact on mobile (p-2), normal on sm+ (p-3)
+        'p-2 sm:p-3',
+        // Touch-friendly minimum height for tap targets (44px+ effective)
+        'min-h-[140px] sm:min-h-[180px]',
         'focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2',
         isDisabled
           ? 'cursor-not-allowed border-neutral-200 bg-neutral-50 opacity-60 dark:border-neutral-800 dark:bg-neutral-900/50'
@@ -48,16 +55,17 @@ export const ProductCard = memo(function ProductCard({
         <motion.div
           initial={{ scale: 0 }}
           animate={{ scale: 1 }}
-          className="absolute -right-1 -top-1 z-10 flex h-6 w-6 items-center justify-center rounded-full bg-primary-600 text-xs font-bold text-white shadow-lg"
+          className="absolute -right-1 -top-1 z-10 flex h-5 w-5 sm:h-6 sm:w-6 items-center justify-center rounded-full bg-primary-600 text-[10px] sm:text-xs font-bold text-white shadow-lg"
         >
           {cartQuantity}
         </motion.div>
       )}
 
-      {/* Product Image/Icon */}
+      {/* Product Image/Icon - smaller on mobile */}
       <div
         className={cn(
-          'mb-3 flex h-16 w-full items-center justify-center rounded-xl',
+          // Height: h-10 on mobile, h-14 on sm+
+          'mb-2 sm:mb-3 flex h-10 sm:h-14 w-full items-center justify-center rounded-lg sm:rounded-xl',
           isDisabled
             ? 'bg-neutral-100 dark:bg-neutral-800'
             : 'bg-gradient-to-br from-primary-50 to-primary-100 dark:from-primary-900/20 dark:to-primary-800/20'
@@ -67,12 +75,12 @@ export const ProductCard = memo(function ProductCard({
           <img
             src={product.images[0]}
             alt={product.name}
-            className="h-12 w-12 rounded-lg object-cover"
+            className="h-8 w-8 sm:h-10 sm:w-10 rounded-md sm:rounded-lg object-cover"
           />
         ) : (
           <Package
             className={cn(
-              'h-8 w-8',
+              'h-5 w-5 sm:h-7 sm:w-7',
               isDisabled
                 ? 'text-neutral-400 dark:text-neutral-600'
                 : 'text-primary-500 dark:text-primary-400'
@@ -81,12 +89,12 @@ export const ProductCard = memo(function ProductCard({
         )}
       </div>
 
-      {/* Product Info */}
-      <div className="flex flex-1 flex-col">
-        {/* Name */}
+      {/* Product Info - min-w-0 allows text to shrink and truncate properly */}
+      <div className="flex min-w-0 flex-1 flex-col">
+        {/* Name - smaller line-clamp on mobile */}
         <h3
           className={cn(
-            'line-clamp-2 text-sm font-semibold leading-tight',
+            'line-clamp-2 text-xs sm:text-sm font-semibold leading-tight',
             isDisabled
               ? 'text-neutral-500 dark:text-neutral-500'
               : 'text-neutral-900 dark:text-white'
@@ -96,15 +104,17 @@ export const ProductCard = memo(function ProductCard({
           {truncate(product.name, 40)}
         </h3>
 
-        {/* SKU */}
-        <p className="mt-0.5 text-xs text-neutral-400 dark:text-neutral-500">
+        {/* SKU - hidden on very small screens, visible on sm+ */}
+        <p className="mt-0.5 text-[10px] sm:text-xs text-neutral-400 dark:text-neutral-500 truncate">
           {product.sku}
         </p>
 
-        {/* Price */}
+        {/* Price - NEVER truncate prices, use smaller font on mobile instead */}
         <p
           className={cn(
-            'mt-2 text-lg font-bold',
+            // shrink-0 prevents price from being compressed
+            // text-sm on mobile, text-base on sm, text-lg on larger screens
+            'mt-1.5 sm:mt-2 shrink-0 text-sm font-bold sm:text-base lg:text-lg',
             isDisabled
               ? 'text-neutral-500 dark:text-neutral-500'
               : 'text-neutral-900 dark:text-white'
@@ -113,20 +123,20 @@ export const ProductCard = memo(function ProductCard({
           {formatCurrency(product.price)}
         </p>
 
-        {/* Stock Indicator */}
-        <div className="mt-2 flex items-center gap-1.5">
+        {/* Stock Indicator - compact on mobile */}
+        <div className="mt-1 sm:mt-2 flex items-center gap-1">
           {stockStatus.color === 'green' && (
-            <span className="h-2 w-2 rounded-full bg-success-500" />
+            <span className="h-1.5 w-1.5 sm:h-2 sm:w-2 rounded-full bg-success-500" />
           )}
           {stockStatus.color === 'yellow' && (
-            <AlertTriangle className="h-3.5 w-3.5 text-warning-500" />
+            <AlertTriangle className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-warning-500" />
           )}
           {stockStatus.color === 'red' && (
-            <XCircle className="h-3.5 w-3.5 text-error-500" />
+            <XCircle className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-error-500" />
           )}
           <span
             className={cn(
-              'text-xs font-medium',
+              'text-[10px] sm:text-xs font-medium truncate',
               stockStatus.color === 'green' &&
                 'text-success-600 dark:text-success-400',
               stockStatus.color === 'yellow' &&
@@ -136,7 +146,7 @@ export const ProductCard = memo(function ProductCard({
           >
             {isOutOfStock
               ? 'Sin stock'
-              : `${product.quantity} disponibles`}
+              : `${product.quantity} disp.`}
           </span>
         </div>
       </div>
@@ -144,7 +154,7 @@ export const ProductCard = memo(function ProductCard({
       {/* Inactive overlay */}
       {isInactive && (
         <div className="absolute inset-0 flex items-center justify-center bg-neutral-900/10 dark:bg-neutral-900/30">
-          <span className="rounded-full bg-neutral-800 px-3 py-1 text-xs font-medium text-white">
+          <span className="rounded-full bg-neutral-800 px-2 py-0.5 sm:px-3 sm:py-1 text-[10px] sm:text-xs font-medium text-white">
             No disponible
           </span>
         </div>

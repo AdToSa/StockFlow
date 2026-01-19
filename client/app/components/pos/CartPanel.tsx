@@ -31,6 +31,17 @@ interface CartPanelProps {
   className?: string;
 }
 
+/**
+ * CartPanel - Main cart container with proper flex structure
+ *
+ * Structure:
+ * div.flex.flex-col.h-full
+ *   ├── Header (shrink-0)
+ *   ├── Items (flex-1 min-h-0 overflow-y-auto)
+ *   ├── Notes (shrink-0)
+ *   ├── Totals (shrink-0)
+ *   └── Actions (shrink-0)
+ */
 export function CartPanel({
   items,
   totals,
@@ -67,21 +78,21 @@ export function CartPanel({
         className
       )}
     >
-      {/* Header */}
-      <div className="flex items-center justify-between border-b border-neutral-200 px-4 py-3 dark:border-neutral-700">
+      {/* Header - shrink-0: never shrink */}
+      <div className="flex shrink-0 items-center justify-between border-b border-neutral-200 px-4 py-3 dark:border-neutral-700">
         <div className="flex items-center gap-2">
           <ShoppingCart className="h-5 w-5 text-primary-600 dark:text-primary-400" />
           <h2 className="font-semibold text-neutral-900 dark:text-white">
             Carrito
           </h2>
-          {items.length > 0 && (
+          {items.length > 0 ? (
             <span className="rounded-full bg-primary-100 px-2 py-0.5 text-xs font-medium text-primary-700 dark:bg-primary-900/30 dark:text-primary-300">
               {totals.itemCount}
             </span>
-          )}
+          ) : null}
         </div>
 
-        {items.length > 0 && (
+        {items.length > 0 ? (
           <button
             type="button"
             onClick={handleClearCart}
@@ -95,11 +106,11 @@ export function CartPanel({
             <Trash2 className="h-3.5 w-3.5" />
             {showClearConfirm ? 'Confirmar' : 'Limpiar'}
           </button>
-        )}
+        ) : null}
       </div>
 
-      {/* Cart Items */}
-      <div className="flex-1 overflow-y-auto p-4">
+      {/* Cart Items - flex-1 min-h-0: flexible, can scroll */}
+      <div className="min-h-0 flex-1 overflow-y-auto p-4">
         <AnimatePresence mode="popLayout">
           {items.length === 0 ? (
             <motion.div
@@ -107,7 +118,7 @@ export function CartPanel({
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
-              className="flex h-full flex-col items-center justify-center py-12 text-center"
+              className="flex flex-col items-center justify-center py-12 text-center"
             >
               <div className="flex h-16 w-16 items-center justify-center rounded-full bg-neutral-100 dark:bg-neutral-700">
                 <ShoppingCart className="h-8 w-8 text-neutral-400" />
@@ -136,9 +147,9 @@ export function CartPanel({
         </AnimatePresence>
       </div>
 
-      {/* Notes Section (collapsible) */}
-      {items.length > 0 && (
-        <div className="border-t border-neutral-200 dark:border-neutral-700">
+      {/* Notes Section (collapsible) - shrink-0: never shrink */}
+      {items.length > 0 ? (
+        <div className="shrink-0 border-t border-neutral-200 dark:border-neutral-700">
           <button
             type="button"
             onClick={() => setShowNotes(!showNotes)}
@@ -147,11 +158,11 @@ export function CartPanel({
             <span className="flex items-center gap-2">
               <MessageSquare className="h-4 w-4" />
               Notas
-              {notes && (
+              {notes ? (
                 <span className="rounded-full bg-primary-100 px-1.5 py-0.5 text-xs text-primary-700 dark:bg-primary-900/30 dark:text-primary-300">
                   1
                 </span>
-              )}
+              ) : null}
             </span>
             {showNotes ? (
               <ChevronUp className="h-4 w-4" />
@@ -161,7 +172,7 @@ export function CartPanel({
           </button>
 
           <AnimatePresence>
-            {showNotes && (
+            {showNotes ? (
               <motion.div
                 initial={{ height: 0, opacity: 0 }}
                 animate={{ height: 'auto', opacity: 1 }}
@@ -179,16 +190,16 @@ export function CartPanel({
                   />
                 </div>
               </motion.div>
-            )}
+            ) : null}
           </AnimatePresence>
         </div>
-      )}
+      ) : null}
 
-      {/* Summary & Actions */}
-      {items.length > 0 && (
-        <div className="border-t border-neutral-200 p-4 dark:border-neutral-700">
+      {/* Summary & Actions - shrink-0: never shrink */}
+      {items.length > 0 ? (
+        <div className="shrink-0 border-t border-neutral-200 p-3 dark:border-neutral-700">
           {/* Summary */}
-          <CartSummary totals={totals} className="mb-4" />
+          <CartSummary totals={totals} className="mb-3" />
 
           {/* Actions */}
           <div className="space-y-2">
@@ -220,7 +231,7 @@ export function CartPanel({
           </div>
 
           {/* Keyboard shortcuts hint */}
-          <div className="mt-3 flex flex-wrap justify-center gap-2 text-xs text-neutral-400">
+          <div className="mt-2 flex flex-wrap justify-center gap-2 text-xs text-neutral-400">
             <span>F2: Buscar</span>
             <span className="text-neutral-300 dark:text-neutral-600">|</span>
             <span>F9: Limpiar</span>
@@ -228,7 +239,7 @@ export function CartPanel({
             <span>F11: Pantalla</span>
           </div>
         </div>
-      )}
+      ) : null}
     </div>
   );
 }

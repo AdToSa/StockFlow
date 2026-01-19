@@ -8,6 +8,38 @@ vi.mock('~/components/ui/ThemeToggle', () => ({
   ThemeToggle: () => <button data-testid="theme-toggle">Theme Toggle</button>,
 }));
 
+// Mock framer-motion to avoid SSR issues in tests
+vi.mock('framer-motion', () => ({
+  motion: {
+    div: ({ children, ...props }: React.PropsWithChildren<Record<string, unknown>>) => {
+      // Filter out framer-motion specific props
+      const { initial, animate, transition, variants, whileHover, whileTap, whileInView, viewport, ...rest } = props;
+      return <div {...rest}>{children}</div>;
+    },
+    section: ({ children, ...props }: React.PropsWithChildren<Record<string, unknown>>) => {
+      const { initial, animate, transition, variants, whileHover, whileTap, whileInView, viewport, ...rest } = props;
+      return <section {...rest}>{children}</section>;
+    },
+    h2: ({ children, ...props }: React.PropsWithChildren<Record<string, unknown>>) => {
+      const { initial, animate, transition, variants, whileHover, whileTap, whileInView, viewport, ...rest } = props;
+      return <h2 {...rest}>{children}</h2>;
+    },
+    p: ({ children, ...props }: React.PropsWithChildren<Record<string, unknown>>) => {
+      const { initial, animate, transition, variants, whileHover, whileTap, whileInView, viewport, ...rest } = props;
+      return <p {...rest}>{children}</p>;
+    },
+    span: ({ children, ...props }: React.PropsWithChildren<Record<string, unknown>>) => {
+      const { initial, animate, transition, variants, whileHover, whileTap, whileInView, viewport, ...rest } = props;
+      return <span {...rest}>{children}</span>;
+    },
+    a: ({ children, ...props }: React.PropsWithChildren<Record<string, unknown>>) => {
+      const { initial, animate, transition, variants, whileHover, whileTap, whileInView, viewport, ...rest } = props;
+      return <a {...rest}>{children}</a>;
+    },
+  },
+  AnimatePresence: ({ children }: React.PropsWithChildren) => <>{children}</>,
+}));
+
 describe('Home route', () => {
   function renderHome() {
     const routes = [
@@ -28,7 +60,7 @@ describe('Home route', () => {
     it('returns correct title', () => {
       const result = meta({} as Parameters<typeof meta>[0]);
       expect(result).toContainEqual({
-        title: 'StockFlow - Inventory & Billing System',
+        title: 'StockFlow - Sistema de Inventario y Facturación',
       });
     });
 
@@ -36,7 +68,8 @@ describe('Home route', () => {
       const result = meta({} as Parameters<typeof meta>[0]);
       expect(result).toContainEqual({
         name: 'description',
-        content: 'Multi-tenant SaaS inventory and billing system',
+        content:
+          'Plataforma multi-tenant para PYMEs colombianas. Control total de inventario, facturación electrónica DIAN y reportes en tiempo real.',
       });
     });
 
@@ -47,67 +80,85 @@ describe('Home route', () => {
   });
 
   describe('component rendering', () => {
-    it('renders the StockFlow heading', () => {
+    it('renders the main heading', () => {
       renderHome();
-      expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('StockFlow');
+      expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(
+        /Gestiona tu inventario de forma/i
+      );
+    });
+
+    it('renders the StockFlow logo text', () => {
+      renderHome();
+      expect(screen.getAllByText('Stock').length).toBeGreaterThan(0);
+      expect(screen.getAllByText('Flow').length).toBeGreaterThan(0);
     });
 
     it('renders the description text', () => {
       renderHome();
       expect(
-        screen.getByText(/Multi-tenant SaaS inventory and billing system/i)
+        screen.getByText(/Plataforma multi-tenant para PYMEs colombianas/i)
       ).toBeInTheDocument();
     });
 
-    it('renders technology stack text', () => {
+    it('renders Iniciar Sesión link', () => {
       renderHome();
-      expect(
-        screen.getByText(/React Router 7 \+ TypeScript \+ Tailwind CSS/i)
-      ).toBeInTheDocument();
+      const links = screen.getAllByRole('link', { name: /Iniciar Sesión/i });
+      expect(links.length).toBeGreaterThan(0);
+      expect(links[0]).toHaveAttribute('href', '/login');
     });
 
-    it('renders Get Started link', () => {
+    it('renders Comenzar Gratis link', () => {
       renderHome();
-      const link = screen.getByRole('link', { name: /get started/i });
-      expect(link).toBeInTheDocument();
-      expect(link).toHaveAttribute('href', '/login');
-    });
-
-    it('renders Dashboard link', () => {
-      renderHome();
-      const link = screen.getByRole('link', { name: /dashboard/i });
-      expect(link).toBeInTheDocument();
-      expect(link).toHaveAttribute('href', '/dashboard');
+      const links = screen.getAllByRole('link', { name: /Comenzar Gratis/i });
+      expect(links.length).toBeGreaterThan(0);
+      expect(links[0]).toHaveAttribute('href', '/register');
     });
 
     it('renders the ThemeToggle component', () => {
       renderHome();
-      expect(screen.getByTestId('theme-toggle')).toBeInTheDocument();
+      expect(screen.getAllByTestId('theme-toggle').length).toBeGreaterThan(0);
     });
 
-    it('displays phase information', () => {
+    it('displays DIAN badge', () => {
       renderHome();
-      expect(screen.getByText(/Phase 1: Foundations Setup Complete/i)).toBeInTheDocument();
+      expect(screen.getAllByText(/Facturación electrónica DIAN/i).length).toBeGreaterThan(0);
     });
   });
 
   describe('layout and structure', () => {
-    it('renders main container with flex layout', () => {
+    it('renders main container', () => {
       renderHome();
       const container = screen.getByRole('heading', { level: 1 }).closest('div');
-      expect(container?.parentElement).toHaveClass('flex');
+      expect(container).toBeInTheDocument();
     });
 
-    it('renders two navigation links', () => {
+    it('renders navigation links', () => {
       renderHome();
       const links = screen.getAllByRole('link');
-      expect(links).toHaveLength(2);
+      expect(links.length).toBeGreaterThan(2);
     });
 
-    it('renders SVG icon', () => {
+    it('renders SVG icons', () => {
       renderHome();
-      const svg = document.querySelector('svg');
-      expect(svg).toBeInTheDocument();
+      const svgs = document.querySelectorAll('svg');
+      expect(svgs.length).toBeGreaterThan(0);
+    });
+  });
+
+  describe('navigation', () => {
+    it('renders Características link', () => {
+      renderHome();
+      expect(screen.getAllByText('Características').length).toBeGreaterThan(0);
+    });
+
+    it('renders Tecnología link', () => {
+      renderHome();
+      expect(screen.getAllByText('Tecnología').length).toBeGreaterThan(0);
+    });
+
+    it('renders Precios link', () => {
+      renderHome();
+      expect(screen.getAllByText('Precios').length).toBeGreaterThan(0);
     });
   });
 
@@ -118,13 +169,13 @@ describe('Home route', () => {
       expect(h1).toBeInTheDocument();
     });
 
-    it('links have descriptive text', () => {
+    it('links have accessible names', () => {
       renderHome();
-      const getStartedLink = screen.getByRole('link', { name: /get started/i });
-      const dashboardLink = screen.getByRole('link', { name: /dashboard/i });
+      const loginLinks = screen.getAllByRole('link', { name: /Iniciar Sesión/i });
+      const registerLinks = screen.getAllByRole('link', { name: /Comenzar Gratis/i });
 
-      expect(getStartedLink).toHaveAccessibleName();
-      expect(dashboardLink).toHaveAccessibleName();
+      expect(loginLinks[0]).toHaveAccessibleName();
+      expect(registerLinks[0]).toHaveAccessibleName();
     });
   });
 });

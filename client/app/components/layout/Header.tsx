@@ -69,7 +69,7 @@ export function Header() {
   const notificationsRef = useRef<HTMLDivElement>(null);
   const profileRef = useRef<HTMLDivElement>(null);
 
-  const { toggleSidebar, sidebarOpen } = useUIStore();
+  const { toggleMobileSidebar, mobileSidebarOpen } = useUIStore();
   const { user } = useAuthStore();
   const { logout, isLoggingOut } = useAuth();
 
@@ -172,11 +172,11 @@ export function Header() {
           <Button
             variant="ghost"
             size="icon"
-            onClick={toggleSidebar}
+            onClick={toggleMobileSidebar}
             className="lg:hidden"
-            aria-label={sidebarOpen ? 'Cerrar menu' : 'Abrir menu'}
+            aria-label={mobileSidebarOpen ? 'Cerrar menu' : 'Abrir menu'}
           >
-            {sidebarOpen ? (
+            {mobileSidebarOpen ? (
               <X className="h-5 w-5" />
             ) : (
               <Menu className="h-5 w-5" />

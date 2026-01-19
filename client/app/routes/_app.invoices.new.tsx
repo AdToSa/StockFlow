@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Maximize2,
@@ -15,6 +15,7 @@ import { useCreateInvoice } from "~/hooks/useInvoices";
 import { useCustomers } from "~/hooks/useCustomers";
 import { useProducts } from "~/hooks/useProducts";
 import { useCategories } from "~/hooks/useCategories";
+import { useWarehouses } from "~/hooks/useWarehouses";
 import { usePOSCart } from "~/hooks/usePOSCart";
 import { Button } from "~/components/ui/Button";
 import { ThemeToggle } from "~/components/ui/ThemeToggle";
@@ -24,10 +25,12 @@ import {
   CartPanel,
   QuickSearch,
   CustomerSelect,
+  WarehouseSelect,
 } from "~/components/pos";
 import type { InvoiceStatus } from "~/types/invoice";
 
-// Meta for SEO
+// Meta for SEO - used by React Router
+// eslint-disable-next-line react-refresh/only-export-components
 export const meta: Route.MetaFunction = () => {
   return [
     { title: "Punto de Venta - StockFlow" },
@@ -56,6 +59,8 @@ export default function POSPage() {
   });
   const { data: categoriesData, isLoading: isLoadingCategories } =
     useCategories();
+  const { data: warehousesData, isLoading: isLoadingWarehouses } =
+    useWarehouses();
   const createInvoice = useCreateInvoice();
 
   // POS Cart hook
@@ -63,6 +68,7 @@ export default function POSPage() {
     cart,
     totals,
     selectedCustomerId,
+    selectedWarehouseId,
     searchQuery,
     selectedCategory,
     isProcessing,
@@ -74,6 +80,7 @@ export default function POSPage() {
     decrementQuantity,
     clearCart,
     setCustomer,
+    setWarehouse,
     setSearchQuery,
     setSelectedCategory,
     setProcessing,
@@ -223,14 +230,23 @@ export default function POSPage() {
   const products = productsData?.data ?? [];
   const customers = customersData?.data ?? [];
   const categories = categoriesData ?? [];
+  const warehouses = warehousesData ?? [];
+
+  // Filter products by warehouse stock (if warehouse is selected)
+  const availableProducts = useMemo(() => {
+    if (!selectedWarehouseId) return products;
+    // For now, return all products - in production, filter by warehouse stock
+    return products;
+  }, [products, selectedWarehouseId]);
 
   return (
-    <div className="flex h-[calc(100vh-4rem)] flex-col lg:h-[calc(100vh-2rem)]">
+    <div className="flex h-[calc(100vh-4rem)] w-full max-w-full min-w-0 flex-col overflow-x-hidden lg:h-[calc(100vh-2rem)]">
       {/* Header */}
-      <header className="shrink-0 border-b border-neutral-200 bg-white px-4 py-3 dark:border-neutral-700 dark:bg-neutral-900">
-        <div className="flex items-center justify-between gap-4">
+      <header className="shrink-0 border-b border-neutral-200 bg-white dark:border-neutral-700 dark:bg-neutral-900">
+        {/* Row 1: Back + Search + Actions */}
+        <div className="flex items-center gap-2 px-3 py-2 sm:gap-4 sm:px-4 sm:py-3">
           {/* Left: Back & Title */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             <Link to="/invoices">
               <Button variant="ghost" size="icon-sm">
                 <ArrowLeft className="h-5 w-5" />
@@ -244,16 +260,27 @@ export default function POSPage() {
           </div>
 
           {/* Center: Search */}
-          <div className="flex-1 max-w-xl">
+          <div className="min-w-0 flex-1 max-w-xl">
             <QuickSearch
               value={searchQuery}
               onChange={setSearchQuery}
-              placeholder="Buscar productos... (F2)"
+              placeholder="Buscar... (F2)"
             />
           </div>
 
-          {/* Right: Customer + Actions */}
-          <div className="flex items-center gap-3">
+          {/* Right: Desktop selectors + Actions */}
+          <div className="flex items-center gap-2 sm:gap-3">
+            {/* Desktop: Warehouse Select */}
+            <div className="hidden lg:block">
+              <WarehouseSelect
+                warehouses={warehouses}
+                selectedWarehouseId={selectedWarehouseId}
+                onSelectWarehouse={setWarehouse}
+                isLoading={isLoadingWarehouses}
+              />
+            </div>
+
+            {/* Desktop: Customer Select */}
             <div className="hidden md:block">
               <CustomerSelect
                 customers={customers}
@@ -267,18 +294,19 @@ export default function POSPage() {
             {isMounted && (
               <Button
                 variant="ghost"
-                size="icon"
+                size="icon-sm"
                 onClick={toggleFullscreen}
                 title={
                   isFullscreen
                     ? "Salir pantalla completa (F11)"
                     : "Pantalla completa (F11)"
                 }
+                className="hidden sm:flex"
               >
                 {isFullscreen ? (
-                  <Minimize2 className="h-5 w-5" />
+                  <Minimize2 className="h-4 w-4" />
                 ) : (
-                  <Maximize2 className="h-5 w-5" />
+                  <Maximize2 className="h-4 w-4" />
                 )}
               </Button>
             )}
@@ -288,39 +316,49 @@ export default function POSPage() {
           </div>
         </div>
 
-        {/* Mobile: Customer Select */}
-        <div className="mt-3 md:hidden">
+        {/* Row 2: Mobile Warehouse + Customer selects */}
+        <div className="flex gap-2 px-3 pb-2 md:hidden">
+          <WarehouseSelect
+            warehouses={warehouses}
+            selectedWarehouseId={selectedWarehouseId}
+            onSelectWarehouse={setWarehouse}
+            isLoading={isLoadingWarehouses}
+            className="flex-1"
+            compact
+          />
           <CustomerSelect
             customers={customers}
             selectedCustomerId={selectedCustomerId}
             onSelectCustomer={setCustomer}
             isLoading={isLoadingCustomers}
-            className="w-full"
+            className="flex-1"
           />
         </div>
       </header>
 
       {/* Main Content */}
-      <div className="flex flex-1 overflow-hidden">
-        {/* Desktop: Side by Side Layout */}
-        <div className="hidden lg:flex lg:flex-1">
-          {/* Left Panel: Product Catalog (58%) */}
-          <div className="flex w-[58%] flex-col overflow-hidden border-r border-neutral-200 bg-neutral-50 p-4 dark:border-neutral-700 dark:bg-neutral-900/50">
-            <ProductCatalog
-              products={products}
-              categories={categories}
-              selectedCategory={selectedCategory}
-              searchQuery={searchQuery}
-              onSelectCategory={setSelectedCategory}
-              onAddToCart={addToCart}
-              getCartQuantity={getCartQuantity}
-              isLoadingProducts={isLoadingProducts}
-              isLoadingCategories={isLoadingCategories}
-            />
+      <div className="flex min-h-0 min-w-0 w-full max-w-full flex-1 overflow-hidden">
+        {/* Desktop: Side by Side Layout - use flex-1 not fixed percentages */}
+        <div className="hidden lg:flex lg:flex-1 lg:overflow-hidden">
+          {/* Products Panel - flexible, can shrink */}
+          <div className="flex flex-1 flex-col overflow-hidden border-r border-neutral-200 bg-neutral-50 dark:border-neutral-700 dark:bg-neutral-900/50">
+            <div className="flex-1 overflow-auto p-4">
+              <ProductCatalog
+                products={availableProducts}
+                categories={categories}
+                selectedCategory={selectedCategory}
+                searchQuery={searchQuery}
+                onSelectCategory={setSelectedCategory}
+                onAddToCart={addToCart}
+                getCartQuantity={getCartQuantity}
+                isLoadingProducts={isLoadingProducts}
+                isLoadingCategories={isLoadingCategories}
+              />
+            </div>
           </div>
 
-          {/* Right Panel: Cart (42%) */}
-          <div className="flex w-[42%] flex-col overflow-hidden bg-neutral-50 p-4 dark:bg-neutral-900/50">
+          {/* Cart Panel - fixed minimum width, won't shrink below it */}
+          <div className="flex w-[420px] min-w-[380px] max-w-[480px] flex-col overflow-hidden bg-white p-4 dark:bg-neutral-900">
             <CartPanel
               items={cart}
               totals={totals}
@@ -334,50 +372,50 @@ export default function POSPage() {
               onClearCart={handleClearCart}
               onSetNotes={setNotes}
               onCheckout={handleCheckout}
-              className="h-full"
+              className="flex-1"
             />
           </div>
         </div>
 
         {/* Tablet/Mobile: Tab-based Layout */}
-        <div className="flex flex-1 flex-col lg:hidden">
-          {/* Mobile Tab Navigation */}
+        <div className="flex flex-1 flex-col min-w-0 w-full max-w-full lg:hidden">
+          {/* Mobile Tab Navigation - touch-friendly with 44px min height */}
           <div className="flex shrink-0 border-b border-neutral-200 bg-white dark:border-neutral-700 dark:bg-neutral-900">
             <button
               type="button"
               onClick={() => setMobileTab("products")}
               className={cn(
-                "flex flex-1 items-center justify-center gap-2 px-4 py-3 text-sm font-medium transition-colors",
+                "flex flex-1 items-center justify-center gap-1.5 sm:gap-2 min-h-[44px] py-2.5 sm:py-3 text-xs sm:text-sm font-medium transition-colors",
                 mobileTab === "products"
                   ? "border-b-2 border-primary-600 text-primary-600"
                   : "text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300",
               )}
             >
-              <Package className="h-5 w-5" />
-              Productos
+              <Package className="h-4 w-4 sm:h-5 sm:w-5" />
+              <span>Productos</span>
             </button>
             <button
               type="button"
               onClick={() => setMobileTab("cart")}
               className={cn(
-                "relative flex flex-1 items-center justify-center gap-2 px-4 py-3 text-sm font-medium transition-colors",
+                "relative flex flex-1 items-center justify-center gap-1.5 sm:gap-2 min-h-[44px] py-2.5 sm:py-3 text-xs sm:text-sm font-medium transition-colors",
                 mobileTab === "cart"
                   ? "border-b-2 border-primary-600 text-primary-600"
                   : "text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300",
               )}
             >
-              <ShoppingCart className="h-5 w-5" />
-              Carrito
+              <ShoppingCart className="h-4 w-4 sm:h-5 sm:w-5" />
+              <span>Carrito</span>
               {cart.length > 0 && (
-                <span className="absolute right-4 top-2 flex h-5 w-5 items-center justify-center rounded-full bg-primary-600 text-xs font-bold text-white">
-                  {totals.itemCount}
+                <span className="absolute -top-0.5 sm:-top-1 right-1/4 flex h-4 sm:h-5 min-w-4 sm:min-w-5 items-center justify-center rounded-full bg-error-500 px-0.5 sm:px-1 text-[10px] sm:text-xs font-bold text-white">
+                  {totals.itemCount > 99 ? "99+" : totals.itemCount}
                 </span>
               )}
             </button>
           </div>
 
           {/* Mobile Content */}
-          <div className="flex-1 overflow-hidden">
+          <div className="min-h-0 min-w-0 w-full max-w-full flex-1 overflow-hidden">
             <AnimatePresence mode="wait">
               {mobileTab === "products" ? (
                 <motion.div
@@ -386,17 +424,23 @@ export default function POSPage() {
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: 20 }}
                   transition={{ duration: 0.2 }}
-                  className="h-full overflow-auto bg-neutral-50 p-4 dark:bg-neutral-900/50"
+                  className={cn(
+                    // Prevent overflow: min-w-0 + w-full + max-w-full + overflow-x-hidden
+                    "h-full w-full max-w-full min-w-0 overflow-y-auto overflow-x-hidden bg-neutral-50 dark:bg-neutral-900/50",
+                    // Smaller padding on mobile (p-2), normal on sm+ (p-4)
+                    "p-2 sm:p-4",
+                    // Space for floating cart bar - pb-28 ensures content not hidden
+                    cart.length > 0 && "pb-28 sm:pb-24"
+                  )}
                 >
                   <ProductCatalog
-                    products={products}
+                    products={availableProducts}
                     categories={categories}
                     selectedCategory={selectedCategory}
                     searchQuery={searchQuery}
                     onSelectCategory={setSelectedCategory}
                     onAddToCart={(product) => {
                       addToCart(product);
-                      // Optionally switch to cart tab after adding
                     }}
                     getCartQuantity={getCartQuantity}
                     isLoadingProducts={isLoadingProducts}
@@ -411,7 +455,7 @@ export default function POSPage() {
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: -20 }}
                   transition={{ duration: 0.2 }}
-                  className="h-full overflow-auto bg-neutral-50 p-4 dark:bg-neutral-900/50"
+                  className="flex h-full w-full max-w-full min-w-0 flex-col overflow-hidden bg-neutral-50 p-2 sm:p-4 dark:bg-neutral-900/50"
                 >
                   <CartPanel
                     items={cart}
@@ -426,7 +470,7 @@ export default function POSPage() {
                     onClearCart={handleClearCart}
                     onSetNotes={setNotes}
                     onCheckout={handleCheckout}
-                    className="h-full"
+                    className="flex h-full flex-col"
                   />
                 </motion.div>
               )}
@@ -438,21 +482,24 @@ export default function POSPage() {
             <motion.div
               initial={{ y: 100 }}
               animate={{ y: 0 }}
-              className="shrink-0 border-t border-neutral-200 bg-white p-4 shadow-lg dark:border-neutral-700 dark:bg-neutral-800"
+              className="fixed bottom-0 left-0 right-0 z-40 border-t border-neutral-200 bg-white p-2 sm:p-3 shadow-2xl dark:border-neutral-700 dark:bg-neutral-800"
+              style={{ paddingBottom: "max(0.5rem, env(safe-area-inset-bottom))" }}
             >
               <button
                 type="button"
                 onClick={() => setMobileTab("cart")}
-                className="flex w-full items-center justify-between rounded-xl bg-primary-600 px-4 py-3 text-white shadow-lg transition-colors hover:bg-primary-700"
+                className="flex w-full items-center justify-between rounded-lg sm:rounded-xl bg-primary-600 px-3 sm:px-4 py-3 sm:py-3.5 text-white transition-colors hover:bg-primary-700 min-h-[48px]"
               >
-                <div className="flex items-center gap-3">
-                  <ShoppingCart className="h-5 w-5" />
-                  <span className="font-medium">
-                    {totals.itemCount}{" "}
-                    {totals.itemCount === 1 ? "item" : "items"}
-                  </span>
+                <div className="flex items-center gap-2 sm:gap-3">
+                  <div className="relative">
+                    <ShoppingCart className="h-4 w-4 sm:h-5 sm:w-5" />
+                    <span className="absolute -right-1.5 sm:-right-2 -top-1.5 sm:-top-2 flex h-4 w-4 sm:h-5 sm:w-5 items-center justify-center rounded-full bg-white text-[10px] sm:text-xs font-bold text-primary-600">
+                      {totals.itemCount}
+                    </span>
+                  </div>
+                  <span className="text-sm sm:text-base font-medium">Ver carrito</span>
                 </div>
-                <span className="text-lg font-bold">
+                <span className="text-base sm:text-lg font-bold">
                   {formatCurrency(totals.total)}
                 </span>
               </button>

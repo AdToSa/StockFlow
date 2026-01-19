@@ -6,3 +6,4 @@ export { CartSummary } from './CartSummary';
 export { CartPanel } from './CartPanel';
 export { QuickSearch } from './QuickSearch';
 export { CustomerSelect } from './CustomerSelect';
+export { WarehouseSelect } from './WarehouseSelect';

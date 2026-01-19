@@ -1,6 +1,6 @@
-import { useState } from 'react';
-import { Link, useParams, useNavigate } from 'react-router';
-import { motion } from 'framer-motion';
+import { useState } from "react";
+import { Link, useParams, useNavigate } from "react-router";
+import { motion } from "framer-motion";
 import {
   ArrowLeft,
   FileText,
@@ -19,19 +19,19 @@ import {
   AlertTriangle,
   DollarSign,
   ChevronDown,
-} from 'lucide-react';
-import type { Route } from './+types/_app.invoices.$id';
-import { cn, formatDate, formatCurrency } from '~/lib/utils';
+} from "lucide-react";
+import type { Route } from "./+types/_app.invoices.$id";
+import { cn, formatDate, formatCurrency } from "~/lib/utils";
 import {
   useInvoice,
   useDeleteInvoice,
   useUpdateInvoiceStatus,
-} from '~/hooks/useInvoices';
-import { Button } from '~/components/ui/Button';
-import { Card, CardHeader, CardTitle, CardContent } from '~/components/ui/Card';
-import { Badge } from '~/components/ui/Badge';
-import { Skeleton } from '~/components/ui/Skeleton';
-import { DeleteModal } from '~/components/ui/DeleteModal';
+} from "~/hooks/useInvoices";
+import { Button } from "~/components/ui/Button";
+import { Card, CardHeader, CardTitle, CardContent } from "~/components/ui/Card";
+import { Badge } from "~/components/ui/Badge";
+import { Skeleton } from "~/components/ui/Skeleton";
+import { DeleteModal } from "~/components/ui/DeleteModal";
 import {
   Table,
   TableHeader,
@@ -39,14 +39,14 @@ import {
   TableHead,
   TableRow,
   TableCell,
-} from '~/components/ui/Table';
-import type { InvoiceStatus } from '~/types/invoice';
+} from "~/components/ui/Table";
+import type { InvoiceStatus } from "~/types/invoice";
 
 // Meta for SEO
 export const meta: Route.MetaFunction = () => {
   return [
-    { title: 'Factura - StockFlow' },
-    { name: 'description', content: 'Detalles de la factura' },
+    { title: "Factura - StockFlow" },
+    { name: "description", content: "Detalles de la factura" },
   ];
 };
 
@@ -69,36 +69,51 @@ const itemVariants = {
 };
 
 // Status badge component with icon
-function InvoiceStatusBadge({ status, size = 'md' }: { status: InvoiceStatus; size?: 'sm' | 'md' | 'lg' }) {
-  const config: Record<InvoiceStatus, {
-    label: string;
-    variant: 'default' | 'primary' | 'secondary' | 'success' | 'warning' | 'error';
-    icon: React.ReactNode;
-  }> = {
+function InvoiceStatusBadge({
+  status,
+  size = "md",
+}: {
+  status: InvoiceStatus;
+  size?: "sm" | "md" | "lg";
+}) {
+  const config: Record<
+    InvoiceStatus,
+    {
+      label: string;
+      variant:
+        | "default"
+        | "primary"
+        | "secondary"
+        | "success"
+        | "warning"
+        | "error";
+      icon: React.ReactNode;
+    }
+  > = {
     DRAFT: {
-      label: 'Borrador',
-      variant: 'secondary',
-      icon: <FileText className="h-3 w-3" />
+      label: "Borrador",
+      variant: "secondary",
+      icon: <FileText className="h-3 w-3" />,
     },
     PENDING: {
-      label: 'Pendiente',
-      variant: 'warning',
-      icon: <Clock className="h-3 w-3" />
+      label: "Pendiente",
+      variant: "warning",
+      icon: <Clock className="h-3 w-3" />,
     },
     PAID: {
-      label: 'Pagada',
-      variant: 'success',
-      icon: <CheckCircle className="h-3 w-3" />
+      label: "Pagada",
+      variant: "success",
+      icon: <CheckCircle className="h-3 w-3" />,
     },
     OVERDUE: {
-      label: 'Vencida',
-      variant: 'error',
-      icon: <AlertTriangle className="h-3 w-3" />
+      label: "Vencida",
+      variant: "error",
+      icon: <AlertTriangle className="h-3 w-3" />,
     },
     CANCELLED: {
-      label: 'Cancelada',
-      variant: 'secondary',
-      icon: <XCircle className="h-3 w-3" />
+      label: "Cancelada",
+      variant: "secondary",
+      icon: <XCircle className="h-3 w-3" />,
     },
   };
 
@@ -125,22 +140,24 @@ function StatusActions({
   const [isOpen, setIsOpen] = useState(false);
 
   // Define available status transitions
-  const getAvailableTransitions = (status: InvoiceStatus): { status: InvoiceStatus; label: string }[] => {
+  const getAvailableTransitions = (
+    status: InvoiceStatus,
+  ): { status: InvoiceStatus; label: string }[] => {
     switch (status) {
-      case 'DRAFT':
+      case "DRAFT":
         return [
-          { status: 'PENDING', label: 'Enviar factura' },
-          { status: 'CANCELLED', label: 'Cancelar' },
+          { status: "PENDING", label: "Enviar factura" },
+          { status: "CANCELLED", label: "Cancelar" },
         ];
-      case 'PENDING':
+      case "PENDING":
         return [
-          { status: 'PAID', label: 'Marcar como pagada' },
-          { status: 'CANCELLED', label: 'Cancelar' },
+          { status: "PAID", label: "Marcar como pagada" },
+          { status: "CANCELLED", label: "Cancelar" },
         ];
-      case 'OVERDUE':
+      case "OVERDUE":
         return [
-          { status: 'PAID', label: 'Marcar como pagada' },
-          { status: 'CANCELLED', label: 'Cancelar' },
+          { status: "PAID", label: "Marcar como pagada" },
+          { status: "CANCELLED", label: "Cancelar" },
         ];
       default:
         return [];
@@ -159,7 +176,14 @@ function StatusActions({
         variant="outline"
         onClick={() => setIsOpen(!isOpen)}
         disabled={isLoading}
-        rightIcon={<ChevronDown className={cn('h-4 w-4 transition-transform', isOpen && 'rotate-180')} />}
+        rightIcon={
+          <ChevronDown
+            className={cn(
+              "h-4 w-4 transition-transform",
+              isOpen && "rotate-180",
+            )}
+          />
+        }
       >
         Cambiar Estado
       </Button>
@@ -242,8 +266,9 @@ export default function InvoiceDetailPage() {
   };
 
   // Check permissions based on status
-  const canEdit = invoice && invoice.status !== 'PAID' && invoice.status !== 'CANCELLED';
-  const canDelete = invoice && invoice.status === 'DRAFT';
+  const canEdit =
+    invoice && invoice.status !== "PAID" && invoice.status !== "CANCELLED";
+  const canDelete = invoice && invoice.status === "DRAFT";
 
   if (isLoading) {
     return <LoadingSkeleton />;
@@ -316,10 +341,7 @@ export default function InvoiceDetailPage() {
               Imprimir
             </Button>
             {canDelete && (
-              <Button
-                variant="danger"
-                onClick={() => setShowDeleteModal(true)}
-              >
+              <Button variant="danger" onClick={() => setShowDeleteModal(true)}>
                 <Trash2 className="h-4 w-4 mr-2" />
                 Eliminar
               </Button>
@@ -335,7 +357,7 @@ export default function InvoiceDetailPage() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                {invoice.customer?.type === 'BUSINESS' ? (
+                {invoice.customer?.type === "BUSINESS" ? (
                   <Building2 className="h-5 w-5 text-primary-500" />
                 ) : (
                   <User className="h-5 w-5 text-primary-500" />
@@ -346,7 +368,7 @@ export default function InvoiceDetailPage() {
             <CardContent className="space-y-4">
               <div>
                 <p className="font-semibold text-neutral-900 dark:text-white">
-                  {invoice.customer?.name || 'Cliente desconocido'}
+                  {invoice.customer?.name || "Cliente desconocido"}
                 </p>
                 {invoice.customer?.document && (
                   <p className="text-sm text-neutral-500 dark:text-neutral-400">
@@ -401,7 +423,9 @@ export default function InvoiceDetailPage() {
             <CardContent>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                 <div>
-                  <p className="text-sm text-neutral-500 dark:text-neutral-400">Fecha de Emision</p>
+                  <p className="text-sm text-neutral-500 dark:text-neutral-400">
+                    Fecha de Emision
+                  </p>
                   <div className="flex items-center gap-1.5 mt-1">
                     <Calendar className="h-4 w-4 text-neutral-400" />
                     <p className="font-medium text-neutral-900 dark:text-white">
@@ -411,18 +435,26 @@ export default function InvoiceDetailPage() {
                 </div>
 
                 <div>
-                  <p className="text-sm text-neutral-500 dark:text-neutral-400">Fecha de Vencimiento</p>
+                  <p className="text-sm text-neutral-500 dark:text-neutral-400">
+                    Fecha de Vencimiento
+                  </p>
                   <div className="flex items-center gap-1.5 mt-1">
-                    <Calendar className={cn(
-                      'h-4 w-4',
-                      invoice.status === 'OVERDUE' ? 'text-error-500' : 'text-neutral-400'
-                    )} />
-                    <p className={cn(
-                      'font-medium',
-                      invoice.status === 'OVERDUE'
-                        ? 'text-error-600 dark:text-error-400'
-                        : 'text-neutral-900 dark:text-white'
-                    )}>
+                    <Calendar
+                      className={cn(
+                        "h-4 w-4",
+                        invoice.status === "OVERDUE"
+                          ? "text-error-500"
+                          : "text-neutral-400",
+                      )}
+                    />
+                    <p
+                      className={cn(
+                        "font-medium",
+                        invoice.status === "OVERDUE"
+                          ? "text-error-600 dark:text-error-400"
+                          : "text-neutral-900 dark:text-white",
+                      )}
+                    >
                       {formatDate(invoice.dueDate)}
                     </p>
                   </div>
@@ -430,7 +462,9 @@ export default function InvoiceDetailPage() {
 
                 {invoice.paidAt && (
                   <div>
-                    <p className="text-sm text-neutral-500 dark:text-neutral-400">Fecha de Pago</p>
+                    <p className="text-sm text-neutral-500 dark:text-neutral-400">
+                      Fecha de Pago
+                    </p>
                     <div className="flex items-center gap-1.5 mt-1">
                       <CheckCircle className="h-4 w-4 text-success-500" />
                       <p className="font-medium text-success-600 dark:text-success-400">
@@ -441,7 +475,9 @@ export default function InvoiceDetailPage() {
                 )}
 
                 <div>
-                  <p className="text-sm text-neutral-500 dark:text-neutral-400">Estado</p>
+                  <p className="text-sm text-neutral-500 dark:text-neutral-400">
+                    Estado
+                  </p>
                   <div className="mt-1">
                     <InvoiceStatusBadge status={invoice.status} />
                   </div>
@@ -452,21 +488,35 @@ export default function InvoiceDetailPage() {
               <div className="mt-6 pt-6 border-t border-neutral-200 dark:border-neutral-700">
                 <div className="flex flex-col gap-2 sm:w-64 sm:ml-auto">
                   <div className="flex justify-between text-sm">
-                    <span className="text-neutral-500 dark:text-neutral-400">Subtotal</span>
-                    <span className="text-neutral-900 dark:text-white">{formatCurrency(invoice.subtotal)}</span>
+                    <span className="text-neutral-500 dark:text-neutral-400">
+                      Subtotal
+                    </span>
+                    <span className="text-neutral-900 dark:text-white">
+                      {formatCurrency(invoice.subtotal)}
+                    </span>
                   </div>
-                  {(invoice.discountAmount > 0) && (
+                  {invoice.discountAmount > 0 && (
                     <div className="flex justify-between text-sm">
-                      <span className="text-neutral-500 dark:text-neutral-400">Descuento</span>
-                      <span className="text-error-600 dark:text-error-400">-{formatCurrency(invoice.discountAmount)}</span>
+                      <span className="text-neutral-500 dark:text-neutral-400">
+                        Descuento
+                      </span>
+                      <span className="text-error-600 dark:text-error-400">
+                        -{formatCurrency(invoice.discountAmount)}
+                      </span>
                     </div>
                   )}
                   <div className="flex justify-between text-sm">
-                    <span className="text-neutral-500 dark:text-neutral-400">IVA</span>
-                    <span className="text-neutral-900 dark:text-white">{formatCurrency(invoice.taxAmount)}</span>
+                    <span className="text-neutral-500 dark:text-neutral-400">
+                      IVA
+                    </span>
+                    <span className="text-neutral-900 dark:text-white">
+                      {formatCurrency(invoice.taxAmount)}
+                    </span>
                   </div>
                   <div className="flex justify-between pt-2 border-t border-neutral-200 dark:border-neutral-700">
-                    <span className="font-semibold text-neutral-900 dark:text-white">Total</span>
+                    <span className="font-semibold text-neutral-900 dark:text-white">
+                      Total
+                    </span>
                     <span className="text-xl font-bold text-primary-600 dark:text-primary-400">
                       {formatCurrency(invoice.total)}
                     </span>
@@ -489,11 +539,17 @@ export default function InvoiceDetailPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-[40%]">Producto / Descripcion</TableHead>
+                    <TableHead className="w-[40%]">
+                      Producto / Descripcion
+                    </TableHead>
                     <TableHead className="text-center">Cantidad</TableHead>
                     <TableHead className="text-right">Precio Unit.</TableHead>
-                    <TableHead className="text-right hidden sm:table-cell">Descuento</TableHead>
-                    <TableHead className="text-right hidden md:table-cell">IVA</TableHead>
+                    <TableHead className="text-right hidden sm:table-cell">
+                      Descuento
+                    </TableHead>
+                    <TableHead className="text-right hidden md:table-cell">
+                      IVA
+                    </TableHead>
                     <TableHead className="text-right">Total</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -528,7 +584,7 @@ export default function InvoiceDetailPage() {
                         )}
                       </TableCell>
                       <TableCell className="text-right hidden md:table-cell">
-                        {item.tax > 0 ? `${item.tax}%` : '-'}
+                        {item.tax > 0 ? `${item.tax}%` : "-"}
                       </TableCell>
                       <TableCell className="text-right font-medium">
                         {formatCurrency(item.subtotal)}

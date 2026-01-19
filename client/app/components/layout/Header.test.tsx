@@ -153,6 +153,7 @@ describe('Header', () => {
     useUIStore.setState({
       sidebarOpen: true,
       sidebarCollapsed: false,
+      mobileSidebarOpen: false,
       activeModal: null,
       modalData: null,
       globalLoading: false,
@@ -218,25 +219,27 @@ describe('Header', () => {
   });
 
   describe('mobile menu toggle', () => {
-    it('should toggle sidebar when clicked', async () => {
+    it('should toggle mobile sidebar when clicked', async () => {
       const user = userEvent.setup();
       render(<Header />, { wrapper: createWrapper() });
 
-      const menuButton = screen.getByLabelText(/cerrar menu/i);
+      // Initially mobileSidebarOpen is false, so should show "Abrir menu"
+      const menuButton = screen.getByLabelText(/abrir menu/i);
       await user.click(menuButton);
 
-      expect(useUIStore.getState().sidebarOpen).toBe(false);
+      expect(useUIStore.getState().mobileSidebarOpen).toBe(true);
     });
 
-    it('should show different icon based on sidebar state', () => {
+    it('should show different icon based on mobile sidebar state', () => {
+      // When mobileSidebarOpen is true, should show close option
+      useUIStore.setState({ mobileSidebarOpen: true });
       render(<Header />, { wrapper: createWrapper() });
 
-      // When sidebar is open, should show close option
       expect(screen.getByLabelText('Cerrar menu')).toBeInTheDocument();
     });
 
-    it('should show open menu when sidebar is closed', () => {
-      useUIStore.setState({ sidebarOpen: false });
+    it('should show open menu when mobile sidebar is closed', () => {
+      useUIStore.setState({ mobileSidebarOpen: false });
 
       render(<Header />, { wrapper: createWrapper() });
 

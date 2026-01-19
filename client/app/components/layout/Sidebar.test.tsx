@@ -59,6 +59,7 @@ describe('Sidebar', () => {
     useUIStore.setState({
       sidebarOpen: true,
       sidebarCollapsed: false,
+      mobileSidebarOpen: false,
       activeModal: null,
       modalData: null,
       globalLoading: false,
@@ -80,12 +81,35 @@ describe('Sidebar', () => {
       expect(screen.getByText('StockFlow')).toBeInTheDocument();
     });
 
-    it('should not render sidebar when sidebarOpen is false', () => {
-      useUIStore.setState({ sidebarOpen: false });
+    it('should render desktop sidebar regardless of mobileSidebarOpen state', () => {
+      // Desktop sidebar is always visible (controlled by CSS hidden lg:flex)
+      // This test verifies the desktop sidebar is always rendered
+      useUIStore.setState({ mobileSidebarOpen: false });
 
       render(<Sidebar />, { wrapper: createWrapper() });
 
-      expect(screen.queryByText('StockFlow')).not.toBeInTheDocument();
+      // Desktop sidebar should always be in the DOM
+      expect(screen.getByText('StockFlow')).toBeInTheDocument();
+    });
+
+    it('should render mobile sidebar overlay when mobileSidebarOpen is true', () => {
+      useUIStore.setState({ mobileSidebarOpen: true });
+
+      render(<Sidebar />, { wrapper: createWrapper() });
+
+      // Should have backdrop overlay for mobile
+      const backdrop = document.querySelector('.lg\\:hidden.fixed.inset-0.z-40.bg-black\\/50');
+      expect(backdrop).toBeInTheDocument();
+    });
+
+    it('should not render mobile sidebar overlay when mobileSidebarOpen is false', () => {
+      useUIStore.setState({ mobileSidebarOpen: false });
+
+      render(<Sidebar />, { wrapper: createWrapper() });
+
+      // Should NOT have backdrop overlay for mobile when closed
+      const backdrop = document.querySelector('.lg\\:hidden.fixed.inset-0.z-40.bg-black\\/50');
+      expect(backdrop).not.toBeInTheDocument();
     });
 
     it('should render the tenant name', () => {

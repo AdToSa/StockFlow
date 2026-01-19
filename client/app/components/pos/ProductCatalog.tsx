@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Package, ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '~/lib/utils';
@@ -38,18 +38,44 @@ export function ProductCatalog({
   const [currentPage, setCurrentPage] = useState(1);
 
   // Reset page when filters change
-  useMemo(() => {
+  useEffect(() => {
     setCurrentPage(1);
   }, [selectedCategory, searchQuery]);
 
+  // Get active products only (for counting and filtering)
+  const activeProducts = useMemo(() => {
+    return products.filter((p) => p.status === 'ACTIVE');
+  }, [products]);
+
+  // Build a Map of categoryId -> active product count for O(1) lookups
+  // This fixes the badge count mismatch where API returns all products but we show only active
+  const categoryActiveCountMap = useMemo(() => {
+    const countMap = new Map<string, number>();
+    for (const product of activeProducts) {
+      if (product.categoryId) {
+        const current = countMap.get(product.categoryId) ?? 0;
+        countMap.set(product.categoryId, current + 1);
+      }
+    }
+    return countMap;
+  }, [activeProducts]);
+
+  // Enhance categories with accurate active product counts
+  const categoriesWithActiveCounts = useMemo(() => {
+    return categories.map((category) => ({
+      ...category,
+      productCount: categoryActiveCountMap.get(category.id) ?? 0,
+    }));
+  }, [categories, categoryActiveCountMap]);
+
   // Filter and sort products
   const filteredProducts = useMemo(() => {
-    let result = products.filter((p) => p.status === 'ACTIVE');
+    let result = activeProducts;
     result = filterProductsByCategory(result, selectedCategory);
     result = filterProductsBySearch(result, searchQuery);
     result = sortProductsForPOS(result);
     return result;
-  }, [products, selectedCategory, searchQuery]);
+  }, [activeProducts, selectedCategory, searchQuery]);
 
   // Pagination
   const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
@@ -69,7 +95,7 @@ export function ProductCatalog({
   // Loading skeleton
   if (isLoadingProducts) {
     return (
-      <div className="flex flex-col">
+      <div className="flex min-w-0 w-full flex-col">
         <CategoryTabs
           categories={[]}
           selectedCategory={null}
@@ -77,11 +103,11 @@ export function ProductCatalog({
           isLoading={isLoadingCategories}
         />
 
-        <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
+        <div className="mt-3 sm:mt-4 grid w-full grid-cols-2 gap-2 sm:gap-3 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
           {Array.from({ length: itemsPerPage }).map((_, i) => (
             <div
               key={i}
-              className="h-[200px] animate-pulse rounded-2xl bg-neutral-200 dark:bg-neutral-700"
+              className="h-[140px] sm:h-[180px] min-w-0 w-full animate-pulse rounded-xl sm:rounded-2xl bg-neutral-200 dark:bg-neutral-700"
             />
           ))}
         </div>
@@ -90,17 +116,18 @@ export function ProductCatalog({
   }
 
   return (
-    <div className="flex flex-col">
-      {/* Category Tabs */}
+    <div className="flex min-w-0 w-full flex-col">
+      {/* Category Tabs - using categories with accurate active product counts */}
       <CategoryTabs
-        categories={categories}
+        categories={categoriesWithActiveCounts}
         selectedCategory={selectedCategory}
         onSelectCategory={onSelectCategory}
         isLoading={isLoadingCategories}
+        totalActiveProducts={activeProducts.length}
       />
 
       {/* Products Grid */}
-      <div className="mt-4 flex-1">
+      <div className="mt-3 sm:mt-4 flex-1">
         <AnimatePresence mode="wait">
           {paginatedProducts.length === 0 ? (
             <motion.div
@@ -108,13 +135,13 @@ export function ProductCatalog({
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
-              className="flex flex-col items-center justify-center py-16"
+              className="flex flex-col items-center justify-center py-12 sm:py-16"
             >
-              <Package className="mb-4 h-16 w-16 text-neutral-300 dark:text-neutral-600" />
-              <h3 className="text-lg font-medium text-neutral-900 dark:text-white">
+              <Package className="mb-3 sm:mb-4 h-12 w-12 sm:h-16 sm:w-16 text-neutral-300 dark:text-neutral-600" />
+              <h3 className="text-base sm:text-lg font-medium text-neutral-900 dark:text-white">
                 No se encontraron productos
               </h3>
-              <p className="mt-1 text-sm text-neutral-500">
+              <p className="mt-1 text-xs sm:text-sm text-neutral-500 text-center px-4">
                 {searchQuery
                   ? 'Intenta con otros terminos de busqueda'
                   : 'No hay productos en esta categoria'}
@@ -126,7 +153,7 @@ export function ProductCatalog({
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5"
+              className="grid w-full grid-cols-2 gap-2 sm:gap-3 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5"
             >
               {paginatedProducts.map((product, index) => (
                 <motion.div
@@ -137,6 +164,7 @@ export function ProductCatalog({
                     y: 0,
                     transition: { delay: index * 0.03 },
                   }}
+                  className="min-w-0 w-full"
                 >
                   <ProductCard
                     product={product}

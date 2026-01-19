@@ -7,6 +7,7 @@ describe('useUIStore', () => {
     useUIStore.setState({
       sidebarOpen: true,
       sidebarCollapsed: false,
+      mobileSidebarOpen: false,
       activeModal: null,
       modalData: null,
       globalLoading: false,
@@ -20,6 +21,7 @@ describe('useUIStore', () => {
 
       expect(state.sidebarOpen).toBe(true);
       expect(state.sidebarCollapsed).toBe(false);
+      expect(state.mobileSidebarOpen).toBe(false);
       expect(state.activeModal).toBeNull();
       expect(state.modalData).toBeNull();
       expect(state.globalLoading).toBe(false);
@@ -92,6 +94,42 @@ describe('useUIStore', () => {
       useUIStore.getState().toggleSidebarCollapse();
 
       expect(useUIStore.getState().sidebarCollapsed).toBe(false);
+    });
+  });
+
+  describe('toggleMobileSidebar', () => {
+    it('should toggle mobileSidebarOpen from false to true', () => {
+      expect(useUIStore.getState().mobileSidebarOpen).toBe(false);
+
+      useUIStore.getState().toggleMobileSidebar();
+
+      expect(useUIStore.getState().mobileSidebarOpen).toBe(true);
+    });
+
+    it('should toggle mobileSidebarOpen from true to false', () => {
+      useUIStore.setState({ mobileSidebarOpen: true });
+
+      useUIStore.getState().toggleMobileSidebar();
+
+      expect(useUIStore.getState().mobileSidebarOpen).toBe(false);
+    });
+  });
+
+  describe('setMobileSidebarOpen', () => {
+    it('should set mobileSidebarOpen to true', () => {
+      expect(useUIStore.getState().mobileSidebarOpen).toBe(false);
+
+      useUIStore.getState().setMobileSidebarOpen(true);
+
+      expect(useUIStore.getState().mobileSidebarOpen).toBe(true);
+    });
+
+    it('should set mobileSidebarOpen to false', () => {
+      useUIStore.setState({ mobileSidebarOpen: true });
+
+      useUIStore.getState().setMobileSidebarOpen(false);
+
+      expect(useUIStore.getState().mobileSidebarOpen).toBe(false);
     });
   });
 

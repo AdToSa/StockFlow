@@ -15,6 +15,7 @@ import {
 export interface POSState {
   cart: POSCartItem[];
   selectedCustomerId: string | null;
+  selectedWarehouseId: string | null;
   searchQuery: string;
   selectedCategory: string | null;
   isProcessing: boolean;
@@ -33,6 +34,7 @@ type POSAction =
   | { type: 'UPDATE_DISCOUNT'; payload: { productId: string; discount: number } }
   | { type: 'CLEAR_CART' }
   | { type: 'SET_CUSTOMER'; payload: string | null }
+  | { type: 'SET_WAREHOUSE'; payload: string | null }
   | { type: 'SET_SEARCH_QUERY'; payload: string }
   | { type: 'SET_SELECTED_CATEGORY'; payload: string | null }
   | { type: 'SET_PROCESSING'; payload: boolean }
@@ -45,6 +47,7 @@ type POSAction =
 const initialState: POSState = {
   cart: [],
   selectedCustomerId: null,
+  selectedWarehouseId: null,
   searchQuery: '',
   selectedCategory: null,
   isProcessing: false,
@@ -179,6 +182,14 @@ function posReducer(state: POSState, action: POSAction): POSState {
         selectedCustomerId: action.payload,
       };
 
+    case 'SET_WAREHOUSE':
+      return {
+        ...state,
+        selectedWarehouseId: action.payload,
+        // Clear cart when warehouse changes to avoid stock conflicts
+        cart: [],
+      };
+
     case 'SET_SEARCH_QUERY':
       return {
         ...state,
@@ -248,6 +259,10 @@ export function usePOSCart() {
 
   const setCustomer = useCallback((customerId: string | null) => {
     dispatch({ type: 'SET_CUSTOMER', payload: customerId });
+  }, []);
+
+  const setWarehouse = useCallback((warehouseId: string | null) => {
+    dispatch({ type: 'SET_WAREHOUSE', payload: warehouseId });
   }, []);
 
   const setSearchQuery = useCallback((query: string) => {
@@ -320,6 +335,7 @@ export function usePOSCart() {
     updateDiscount,
     clearCart,
     setCustomer,
+    setWarehouse,
     setSearchQuery,
     setSelectedCategory,
     setProcessing,
