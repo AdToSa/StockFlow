@@ -10,6 +10,7 @@ import { useAuth } from "~/hooks/useAuth";
 import { Button } from "~/components/ui/Button";
 import { Input } from "~/components/ui/Input";
 import { ThemeToggle } from "~/components/ui/ThemeToggle";
+import { requireGuest, getRedirectTo } from "~/lib/auth.server";
 import type { Route } from "./+types/login";
 
 // Validation schema
@@ -51,6 +52,13 @@ export function meta({}: Route.MetaArgs) {
     { title: "Iniciar Sesion - StockFlow" },
     { name: "description", content: "Inicia sesion en tu cuenta de StockFlow" },
   ];
+}
+
+// Redirect authenticated users to dashboard (or redirectTo param)
+export function loader({ request }: Route.LoaderArgs) {
+  const redirectTo = getRedirectTo(request);
+  requireGuest(request, redirectTo);
+  return null;
 }
 
 export default function LoginPage() {

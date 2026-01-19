@@ -20,6 +20,7 @@ import { useAuth } from '~/hooks/useAuth';
 import { Button } from '~/components/ui/Button';
 import { Input } from '~/components/ui/Input';
 import { ThemeToggle } from '~/components/ui/ThemeToggle';
+import { requireGuest } from '~/lib/auth.server';
 import type { Route } from './+types/register';
 
 // Validation schema
@@ -57,6 +58,12 @@ export function meta({}: Route.MetaArgs) {
     { title: 'Crear Cuenta - StockFlow' },
     { name: 'description', content: 'Crea tu cuenta en StockFlow' },
   ];
+}
+
+// Redirect authenticated users to dashboard
+export function loader({ request }: Route.LoaderArgs) {
+  requireGuest(request);
+  return null;
 }
 
 export default function RegisterPage() {

@@ -1,6 +1,6 @@
-import { redirect } from 'react-router';
 import type { Route } from './+types/_app';
 import { AppLayout } from '~/components/layout';
+import { requireAuth } from '~/lib/auth.server';
 
 // Meta function for SEO
 export const meta: Route.MetaFunction = () => {
@@ -11,15 +11,9 @@ export const meta: Route.MetaFunction = () => {
 };
 
 // Loader to check authentication
-// In a real app, this would verify the JWT token
-export async function loader({ request }: Route.LoaderArgs) {
-  // TODO: Implement proper auth check with cookie/session validation
-  // For now, we'll skip the redirect to allow development
-  // const authToken = request.headers.get('cookie')?.includes('auth');
-  // if (!authToken) {
-  //   throw redirect('/login');
-  // }
-
+// Redirects unauthenticated users to login page
+export function loader({ request }: Route.LoaderArgs) {
+  requireAuth(request);
   return null;
 }
 

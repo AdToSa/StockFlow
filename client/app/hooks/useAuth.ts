@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router';
 import { authService } from '~/services/auth.service';
 import { useAuthStore } from '~/stores/auth.store';
 import { queryKeys } from '~/lib/query-client';
+import { getAccessToken } from '~/lib/api';
 import { toast } from '~/components/ui/Toast';
 import type { LoginCredentials, RegisterData, RegisterResponse } from '~/services/auth.service';
 
@@ -11,7 +12,7 @@ export function useAuth() {
   const queryClient = useQueryClient();
   const { setUser, setTenant, logout: clearAuth } = useAuthStore();
 
-  // Get current user
+  // Get current user - only fetch if access token exists to prevent unnecessary 401 errors
   const {
     data: authData,
     isLoading,
@@ -19,6 +20,7 @@ export function useAuth() {
   } = useQuery({
     queryKey: queryKeys.auth.me(),
     queryFn: authService.getMe,
+    enabled: !!getAccessToken(),
     retry: false,
     staleTime: Infinity,
   });

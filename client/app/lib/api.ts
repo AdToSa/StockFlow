@@ -29,8 +29,13 @@ export const getAccessToken = () => accessToken;
 export const setRefreshToken = (token: string | null) => {
   if (token) {
     localStorage.setItem(REFRESH_TOKEN_KEY, token);
+    // Also set a cookie for SSR auth detection (non-sensitive flag only)
+    // The actual token stays in localStorage for security
+    document.cookie = `${REFRESH_TOKEN_KEY}=true; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`;
   } else {
     localStorage.removeItem(REFRESH_TOKEN_KEY);
+    // Remove the cookie
+    document.cookie = `${REFRESH_TOKEN_KEY}=; path=/; max-age=0; SameSite=Lax`;
   }
 };
 

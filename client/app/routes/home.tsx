@@ -3,6 +3,7 @@ import { Link } from "react-router";
 import type { Route } from "./+types/home";
 import { ThemeToggle } from "~/components/ui/ThemeToggle";
 import { motion } from "framer-motion";
+import { requireGuest } from "~/lib/auth.server";
 
 import {
   Package,
@@ -46,6 +47,12 @@ export function meta({}: Route.MetaArgs) {
         "Plataforma multi-tenant para PYMEs colombianas. Control total de inventario, facturación electrónica DIAN y reportes en tiempo real.",
     },
   ];
+}
+
+// Redirect authenticated users to dashboard
+export function loader({ request }: Route.LoaderArgs) {
+  requireGuest(request);
+  return null;
 }
 
 // Animation variants - hoisted outside component for performance

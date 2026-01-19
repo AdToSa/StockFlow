@@ -20,6 +20,12 @@ vi.mock("~/services/auth.service", () => ({
   },
 }));
 
+vi.mock("~/lib/api", () => ({
+  getAccessToken: vi.fn(),
+}));
+
+import { getAccessToken } from "~/lib/api";
+
 vi.mock("~/components/ui/Toast", () => ({
   toast: {
     success: vi.fn(),
@@ -98,6 +104,7 @@ describe("useAuth", () => {
 
   describe("initial state", () => {
     it("should return loading state initially", () => {
+      vi.mocked(getAccessToken).mockReturnValue("mock-token");
       vi.mocked(authService.getMe).mockReturnValue(new Promise(() => {})); // Never resolves
 
       const { result } = renderHook(() => useAuth(), {
@@ -109,7 +116,8 @@ describe("useAuth", () => {
       expect(result.current.isAuthenticated).toBe(false);
     });
 
-    it("should call getMe on mount", () => {
+    it("should call getMe on mount when token exists", () => {
+      vi.mocked(getAccessToken).mockReturnValue("mock-token");
       vi.mocked(authService.getMe).mockRejectedValue(new Error("Unauthorized"));
 
       renderHook(() => useAuth(), {
@@ -117,6 +125,19 @@ describe("useAuth", () => {
       });
 
       expect(authService.getMe).toHaveBeenCalled();
+    });
+
+    it("should not call getMe when no token exists", () => {
+      vi.mocked(getAccessToken).mockReturnValue(null);
+
+      const { result } = renderHook(() => useAuth(), {
+        wrapper: createWrapper(),
+      });
+
+      expect(authService.getMe).not.toHaveBeenCalled();
+      expect(result.current.isLoading).toBe(false);
+      expect(result.current.user).toBeNull();
+      expect(result.current.isAuthenticated).toBe(false);
     });
   });
 
@@ -416,6 +437,7 @@ describe("useAuth", () => {
 
   describe("logout mutation", () => {
     it("should call authService.logout", async () => {
+      vi.mocked(getAccessToken).mockReturnValue("mock-token");
       vi.mocked(authService.getMe).mockResolvedValue(mockAuthResponse);
       vi.mocked(authService.logout).mockResolvedValue();
 
@@ -437,6 +459,7 @@ describe("useAuth", () => {
     });
 
     it("should navigate to login on logout", async () => {
+      vi.mocked(getAccessToken).mockReturnValue("mock-token");
       vi.mocked(authService.getMe).mockResolvedValue(mockAuthResponse);
       vi.mocked(authService.logout).mockResolvedValue();
 
@@ -458,6 +481,7 @@ describe("useAuth", () => {
     });
 
     it("should clear auth store on logout", async () => {
+      vi.mocked(getAccessToken).mockReturnValue("mock-token");
       vi.mocked(authService.getMe).mockResolvedValue(mockAuthResponse);
       vi.mocked(authService.logout).mockResolvedValue();
 
@@ -643,6 +667,7 @@ describe("useAuth", () => {
 
   describe("authenticated user query", () => {
     it("should return user data when authenticated", async () => {
+      vi.mocked(getAccessToken).mockReturnValue("mock-token");
       vi.mocked(authService.getMe).mockResolvedValue(mockAuthResponse);
 
       const { result } = renderHook(() => useAuth(), {
@@ -658,7 +683,8 @@ describe("useAuth", () => {
       expect(result.current.isAuthenticated).toBe(true);
     });
 
-    it("should return null user when not authenticated", async () => {
+    it("should return null user when token exists but request fails", async () => {
+      vi.mocked(getAccessToken).mockReturnValue("mock-token");
       vi.mocked(authService.getMe).mockRejectedValue(new Error("Unauthorized"));
 
       const { result } = renderHook(() => useAuth(), {
@@ -669,6 +695,19 @@ describe("useAuth", () => {
         expect(result.current.isLoading).toBe(false);
       });
 
+      expect(result.current.user).toBeNull();
+      expect(result.current.isAuthenticated).toBe(false);
+    });
+
+    it("should return null user when no token exists", async () => {
+      vi.mocked(getAccessToken).mockReturnValue(null);
+
+      const { result } = renderHook(() => useAuth(), {
+        wrapper: createWrapper(),
+      });
+
+      // Query should be disabled immediately, no loading state
+      expect(result.current.isLoading).toBe(false);
       expect(result.current.user).toBeNull();
       expect(result.current.isAuthenticated).toBe(false);
     });
