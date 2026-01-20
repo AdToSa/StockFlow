@@ -29,7 +29,11 @@ describe('GitHubStrategy', () => {
     jest.clearAllMocks();
 
     const mockConfigService = {
-      get: jest.fn().mockImplementation((key: string): string | undefined => mockConfig[key]),
+      get: jest
+        .fn()
+        .mockImplementation(
+          (key: string): string | undefined => mockConfig[key],
+        ),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -130,7 +134,11 @@ describe('GitHubStrategy', () => {
       freshLoggerSpy.mockClear();
 
       const mockConfigService = {
-        get: jest.fn().mockImplementation((key: string): string | undefined => mockConfig[key]),
+        get: jest
+          .fn()
+          .mockImplementation(
+            (key: string): string | undefined => mockConfig[key],
+          ),
       };
 
       await Test.createTestingModule({

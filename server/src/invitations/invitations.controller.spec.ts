@@ -113,8 +113,12 @@ describe('InvitationsController', () => {
     };
 
     it('should create a new invitation', async () => {
-      (prismaService.user.findUnique as jest.Mock).mockResolvedValue(mockAdminUser);
-      (invitationsService.create as jest.Mock).mockResolvedValue(mockInvitationResponse);
+      (prismaService.user.findUnique as jest.Mock).mockResolvedValue(
+        mockAdminUser,
+      );
+      (invitationsService.create as jest.Mock).mockResolvedValue(
+        mockInvitationResponse,
+      );
 
       const result = await controller.create(createDto, mockCurrentUser);
 
@@ -122,21 +126,28 @@ describe('InvitationsController', () => {
       expect(prismaService.user.findUnique).toHaveBeenCalledWith({
         where: { id: mockCurrentUser.userId },
       });
-      expect(invitationsService.create).toHaveBeenCalledWith(createDto, mockAdminUser);
+      expect(invitationsService.create).toHaveBeenCalledWith(
+        createDto,
+        mockAdminUser,
+      );
     });
 
     it('should throw error if admin user not found', async () => {
       (prismaService.user.findUnique as jest.Mock).mockResolvedValue(null);
 
-      await expect(controller.create(createDto, mockCurrentUser)).rejects.toThrow(
-        'Admin user not found',
-      );
+      await expect(
+        controller.create(createDto, mockCurrentUser),
+      ).rejects.toThrow('Admin user not found');
     });
 
     it('should log the create request', async () => {
       const loggerSpy = jest.spyOn(Logger.prototype, 'log');
-      (prismaService.user.findUnique as jest.Mock).mockResolvedValue(mockAdminUser);
-      (invitationsService.create as jest.Mock).mockResolvedValue(mockInvitationResponse);
+      (prismaService.user.findUnique as jest.Mock).mockResolvedValue(
+        mockAdminUser,
+      );
+      (invitationsService.create as jest.Mock).mockResolvedValue(
+        mockInvitationResponse,
+      );
 
       await controller.create(createDto, mockCurrentUser);
 
@@ -149,8 +160,12 @@ describe('InvitationsController', () => {
     });
 
     it('should pass the correct user to the service', async () => {
-      (prismaService.user.findUnique as jest.Mock).mockResolvedValue(mockAdminUser);
-      (invitationsService.create as jest.Mock).mockResolvedValue(mockInvitationResponse);
+      (prismaService.user.findUnique as jest.Mock).mockResolvedValue(
+        mockAdminUser,
+      );
+      (invitationsService.create as jest.Mock).mockResolvedValue(
+        mockInvitationResponse,
+      );
 
       await controller.create(createDto, mockCurrentUser);
 
@@ -168,12 +183,16 @@ describe('InvitationsController', () => {
   describe('findAll', () => {
     it('should return all invitations for the tenant', async () => {
       const invitations = [mockInvitationResponse];
-      (invitationsService.findAllByTenant as jest.Mock).mockResolvedValue(invitations);
+      (invitationsService.findAllByTenant as jest.Mock).mockResolvedValue(
+        invitations,
+      );
 
       const result = await controller.findAll(mockCurrentUser);
 
       expect(result).toEqual(invitations);
-      expect(invitationsService.findAllByTenant).toHaveBeenCalledWith(mockCurrentUser.tenantId);
+      expect(invitationsService.findAllByTenant).toHaveBeenCalledWith(
+        mockCurrentUser.tenantId,
+      );
     });
 
     it('should return empty array when no invitations exist', async () => {
@@ -207,7 +226,9 @@ describe('InvitationsController', () => {
 
       await controller.findAll(differentTenantUser);
 
-      expect(invitationsService.findAllByTenant).toHaveBeenCalledWith('different-tenant');
+      expect(invitationsService.findAllByTenant).toHaveBeenCalledWith(
+        'different-tenant',
+      );
     });
   });
 
@@ -263,7 +284,9 @@ describe('InvitationsController', () => {
     const invitationId = 'invitation-123';
 
     it('should resend an invitation', async () => {
-      (invitationsService.resend as jest.Mock).mockResolvedValue(mockInvitationResponse);
+      (invitationsService.resend as jest.Mock).mockResolvedValue(
+        mockInvitationResponse,
+      );
 
       const result = await controller.resend(invitationId, mockCurrentUser);
 
@@ -276,7 +299,9 @@ describe('InvitationsController', () => {
 
     it('should log the resend request', async () => {
       const loggerSpy = jest.spyOn(Logger.prototype, 'log');
-      (invitationsService.resend as jest.Mock).mockResolvedValue(mockInvitationResponse);
+      (invitationsService.resend as jest.Mock).mockResolvedValue(
+        mockInvitationResponse,
+      );
 
       await controller.resend(invitationId, mockCurrentUser);
 
@@ -293,7 +318,9 @@ describe('InvitationsController', () => {
         ...mockInvitationResponse,
         expiresAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
       };
-      (invitationsService.resend as jest.Mock).mockResolvedValue(updatedInvitation);
+      (invitationsService.resend as jest.Mock).mockResolvedValue(
+        updatedInvitation,
+      );
 
       const result = await controller.resend(invitationId, mockCurrentUser);
 
@@ -301,7 +328,9 @@ describe('InvitationsController', () => {
     });
 
     it('should pass tenant ID for authorization', async () => {
-      (invitationsService.resend as jest.Mock).mockResolvedValue(mockInvitationResponse);
+      (invitationsService.resend as jest.Mock).mockResolvedValue(
+        mockInvitationResponse,
+      );
 
       await controller.resend(invitationId, mockCurrentUser);
 
@@ -329,7 +358,9 @@ describe('InvitationsController', () => {
   describe('error propagation', () => {
     it('should propagate service errors for create', async () => {
       const error = new Error('Service error');
-      (prismaService.user.findUnique as jest.Mock).mockResolvedValue(mockAdminUser);
+      (prismaService.user.findUnique as jest.Mock).mockResolvedValue(
+        mockAdminUser,
+      );
       (invitationsService.create as jest.Mock).mockRejectedValue(error);
 
       await expect(
@@ -339,9 +370,13 @@ describe('InvitationsController', () => {
 
     it('should propagate service errors for findAll', async () => {
       const error = new Error('Service error');
-      (invitationsService.findAllByTenant as jest.Mock).mockRejectedValue(error);
+      (invitationsService.findAllByTenant as jest.Mock).mockRejectedValue(
+        error,
+      );
 
-      await expect(controller.findAll(mockCurrentUser)).rejects.toThrow('Service error');
+      await expect(controller.findAll(mockCurrentUser)).rejects.toThrow(
+        'Service error',
+      );
     });
 
     it('should propagate service errors for cancel', async () => {

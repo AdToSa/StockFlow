@@ -23,7 +23,8 @@ describe('InvitationsService', () => {
 
   // Test data
   const mockTenantId = 'tenant-123';
-  const mockToken = 'mock-token-hex-string-64-chars-long-for-testing-purposes-here';
+  const mockToken =
+    'mock-token-hex-string-64-chars-long-for-testing-purposes-here';
 
   const mockAdminUser = {
     id: 'admin-123',
@@ -166,8 +167,12 @@ describe('InvitationsService', () => {
 
     it('should create a new invitation successfully', async () => {
       (prismaService.user.findUnique as jest.Mock).mockResolvedValue(null);
-      (prismaService.invitation.findUnique as jest.Mock).mockResolvedValue(null);
-      (prismaService.invitation.create as jest.Mock).mockResolvedValue(mockInvitation);
+      (prismaService.invitation.findUnique as jest.Mock).mockResolvedValue(
+        null,
+      );
+      (prismaService.invitation.create as jest.Mock).mockResolvedValue(
+        mockInvitation,
+      );
 
       const result = await service.create(createDto, mockAdminUser as any);
 
@@ -185,7 +190,9 @@ describe('InvitationsService', () => {
       };
 
       (prismaService.user.findUnique as jest.Mock).mockResolvedValue(null);
-      (prismaService.invitation.findUnique as jest.Mock).mockResolvedValue(null);
+      (prismaService.invitation.findUnique as jest.Mock).mockResolvedValue(
+        null,
+      );
       (prismaService.invitation.create as jest.Mock).mockResolvedValue({
         ...mockInvitation,
         email: 'invitee@example.com',
@@ -207,8 +214,12 @@ describe('InvitationsService', () => {
       const dtoWithoutRole = { email: 'invitee@example.com' };
 
       (prismaService.user.findUnique as jest.Mock).mockResolvedValue(null);
-      (prismaService.invitation.findUnique as jest.Mock).mockResolvedValue(null);
-      (prismaService.invitation.create as jest.Mock).mockResolvedValue(mockInvitation);
+      (prismaService.invitation.findUnique as jest.Mock).mockResolvedValue(
+        null,
+      );
+      (prismaService.invitation.create as jest.Mock).mockResolvedValue(
+        mockInvitation,
+      );
 
       await service.create(dtoWithoutRole as any, mockAdminUser as any);
 
@@ -263,7 +274,9 @@ describe('InvitationsService', () => {
       (prismaService.invitation.delete as jest.Mock).mockResolvedValue(
         mockExpiredInvitation,
       );
-      (prismaService.invitation.create as jest.Mock).mockResolvedValue(mockInvitation);
+      (prismaService.invitation.create as jest.Mock).mockResolvedValue(
+        mockInvitation,
+      );
 
       const result = await service.create(createDto, mockAdminUser as any);
 
@@ -281,7 +294,9 @@ describe('InvitationsService', () => {
       (prismaService.invitation.delete as jest.Mock).mockResolvedValue(
         mockCancelledInvitation,
       );
-      (prismaService.invitation.create as jest.Mock).mockResolvedValue(mockInvitation);
+      (prismaService.invitation.create as jest.Mock).mockResolvedValue(
+        mockInvitation,
+      );
 
       const result = await service.create(createDto, mockAdminUser as any);
 
@@ -293,8 +308,12 @@ describe('InvitationsService', () => {
 
     it('should send invitation email after creation', async () => {
       (prismaService.user.findUnique as jest.Mock).mockResolvedValue(null);
-      (prismaService.invitation.findUnique as jest.Mock).mockResolvedValue(null);
-      (prismaService.invitation.create as jest.Mock).mockResolvedValue(mockInvitation);
+      (prismaService.invitation.findUnique as jest.Mock).mockResolvedValue(
+        null,
+      );
+      (prismaService.invitation.create as jest.Mock).mockResolvedValue(
+        mockInvitation,
+      );
 
       await service.create(createDto, mockAdminUser as any);
 
@@ -311,9 +330,15 @@ describe('InvitationsService', () => {
 
     it('should log error when email sending fails', async () => {
       (prismaService.user.findUnique as jest.Mock).mockResolvedValue(null);
-      (prismaService.invitation.findUnique as jest.Mock).mockResolvedValue(null);
-      (prismaService.invitation.create as jest.Mock).mockResolvedValue(mockInvitation);
-      (brevoService.sendEmail as jest.Mock).mockRejectedValue(new Error('Email failed'));
+      (prismaService.invitation.findUnique as jest.Mock).mockResolvedValue(
+        null,
+      );
+      (prismaService.invitation.create as jest.Mock).mockResolvedValue(
+        mockInvitation,
+      );
+      (brevoService.sendEmail as jest.Mock).mockRejectedValue(
+        new Error('Email failed'),
+      );
 
       const loggerSpy = jest.spyOn(Logger.prototype, 'error');
 
@@ -327,8 +352,12 @@ describe('InvitationsService', () => {
 
     it('should generate secure token using crypto', async () => {
       (prismaService.user.findUnique as jest.Mock).mockResolvedValue(null);
-      (prismaService.invitation.findUnique as jest.Mock).mockResolvedValue(null);
-      (prismaService.invitation.create as jest.Mock).mockResolvedValue(mockInvitation);
+      (prismaService.invitation.findUnique as jest.Mock).mockResolvedValue(
+        null,
+      );
+      (prismaService.invitation.create as jest.Mock).mockResolvedValue(
+        mockInvitation,
+      );
 
       await service.create(createDto, mockAdminUser as any);
 
@@ -337,26 +366,38 @@ describe('InvitationsService', () => {
 
     it('should set expiration date 7 days from now', async () => {
       (prismaService.user.findUnique as jest.Mock).mockResolvedValue(null);
-      (prismaService.invitation.findUnique as jest.Mock).mockResolvedValue(null);
-      (prismaService.invitation.create as jest.Mock).mockResolvedValue(mockInvitation);
+      (prismaService.invitation.findUnique as jest.Mock).mockResolvedValue(
+        null,
+      );
+      (prismaService.invitation.create as jest.Mock).mockResolvedValue(
+        mockInvitation,
+      );
 
       const now = new Date();
       await service.create(createDto, mockAdminUser as any);
 
-      const createCall = (prismaService.invitation.create as jest.Mock).mock.calls[0][0];
+      const createCall = (prismaService.invitation.create as jest.Mock).mock
+        .calls[0][0];
       const expiresAt = new Date(createCall.data.expiresAt);
       const expectedExpiry = new Date(now);
       expectedExpiry.setDate(expectedExpiry.getDate() + 7);
 
       // Allow 1 second tolerance
-      expect(Math.abs(expiresAt.getTime() - expectedExpiry.getTime())).toBeLessThan(1000);
+      expect(
+        Math.abs(expiresAt.getTime() - expectedExpiry.getTime()),
+      ).toBeLessThan(1000);
     });
   });
 
   describe('findAllByTenant', () => {
     it('should return all invitations for a tenant', async () => {
-      const invitations = [mockInvitation, { ...mockInvitation, id: 'invitation-456' }];
-      (prismaService.invitation.findMany as jest.Mock).mockResolvedValue(invitations);
+      const invitations = [
+        mockInvitation,
+        { ...mockInvitation, id: 'invitation-456' },
+      ];
+      (prismaService.invitation.findMany as jest.Mock).mockResolvedValue(
+        invitations,
+      );
 
       const result = await service.findAllByTenant(mockTenantId);
 
@@ -386,7 +427,9 @@ describe('InvitationsService', () => {
     });
 
     it('should map invitations to response format', async () => {
-      (prismaService.invitation.findMany as jest.Mock).mockResolvedValue([mockInvitation]);
+      (prismaService.invitation.findMany as jest.Mock).mockResolvedValue([
+        mockInvitation,
+      ]);
 
       const result = await service.findAllByTenant(mockTenantId);
 
@@ -404,7 +447,9 @@ describe('InvitationsService', () => {
 
   describe('findByToken', () => {
     it('should return invitation when valid token is provided', async () => {
-      (prismaService.invitation.findUnique as jest.Mock).mockResolvedValue(mockInvitation);
+      (prismaService.invitation.findUnique as jest.Mock).mockResolvedValue(
+        mockInvitation,
+      );
 
       const result = await service.findByToken(mockToken);
 
@@ -431,7 +476,9 @@ describe('InvitationsService', () => {
     });
 
     it('should throw NotFoundException when invitation not found', async () => {
-      (prismaService.invitation.findUnique as jest.Mock).mockResolvedValue(null);
+      (prismaService.invitation.findUnique as jest.Mock).mockResolvedValue(
+        null,
+      );
 
       await expect(service.findByToken('invalid-token')).rejects.toThrow(
         NotFoundException,
@@ -443,7 +490,9 @@ describe('InvitationsService', () => {
         mockExpiredInvitation,
       );
 
-      await expect(service.findByToken(mockToken)).rejects.toThrow(BadRequestException);
+      await expect(service.findByToken(mockToken)).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it('should throw BadRequestException for cancelled invitation', async () => {
@@ -451,7 +500,9 @@ describe('InvitationsService', () => {
         mockCancelledInvitation,
       );
 
-      await expect(service.findByToken(mockToken)).rejects.toThrow(BadRequestException);
+      await expect(service.findByToken(mockToken)).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it('should throw BadRequestException for already accepted invitation', async () => {
@@ -459,7 +510,9 @@ describe('InvitationsService', () => {
         mockAcceptedInvitation,
       );
 
-      await expect(service.findByToken(mockToken)).rejects.toThrow(BadRequestException);
+      await expect(service.findByToken(mockToken)).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it('should update status to expired and throw if expiration date has passed', async () => {
@@ -475,7 +528,9 @@ describe('InvitationsService', () => {
         status: InvitationStatus.EXPIRED,
       });
 
-      await expect(service.findByToken(mockToken)).rejects.toThrow(BadRequestException);
+      await expect(service.findByToken(mockToken)).rejects.toThrow(
+        BadRequestException,
+      );
 
       expect(prismaService.invitation.update).toHaveBeenCalledWith({
         where: { id: pastExpiredInvitation.id },
@@ -486,7 +541,9 @@ describe('InvitationsService', () => {
 
   describe('cancel', () => {
     it('should cancel a pending invitation', async () => {
-      (prismaService.invitation.findFirst as jest.Mock).mockResolvedValue(mockInvitation);
+      (prismaService.invitation.findFirst as jest.Mock).mockResolvedValue(
+        mockInvitation,
+      );
       (prismaService.invitation.update as jest.Mock).mockResolvedValue({
         ...mockInvitation,
         status: InvitationStatus.CANCELLED,
@@ -503,9 +560,9 @@ describe('InvitationsService', () => {
     it('should throw NotFoundException when invitation not found', async () => {
       (prismaService.invitation.findFirst as jest.Mock).mockResolvedValue(null);
 
-      await expect(service.cancel('non-existent', mockTenantId)).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(
+        service.cancel('non-existent', mockTenantId),
+      ).rejects.toThrow(NotFoundException);
     });
 
     it('should throw BadRequestException for non-pending invitation', async () => {
@@ -541,9 +598,9 @@ describe('InvitationsService', () => {
     it('should only find invitations within the tenant', async () => {
       (prismaService.invitation.findFirst as jest.Mock).mockResolvedValue(null);
 
-      await expect(service.cancel('invitation-id', 'other-tenant')).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(
+        service.cancel('invitation-id', 'other-tenant'),
+      ).rejects.toThrow(NotFoundException);
 
       expect(prismaService.invitation.findFirst).toHaveBeenCalledWith({
         where: { id: 'invitation-id', tenantId: 'other-tenant' },
@@ -553,12 +610,15 @@ describe('InvitationsService', () => {
 
   describe('resend', () => {
     it('should resend invitation with new token and expiration', async () => {
-      const newToken = 'new-token-hex-string-64-chars-long-for-testing-purposes-now';
+      const newToken =
+        'new-token-hex-string-64-chars-long-for-testing-purposes-now';
       (crypto.randomBytes as jest.Mock).mockReturnValue({
         toString: jest.fn().mockReturnValue(newToken),
       });
 
-      (prismaService.invitation.findFirst as jest.Mock).mockResolvedValue(mockInvitation);
+      (prismaService.invitation.findFirst as jest.Mock).mockResolvedValue(
+        mockInvitation,
+      );
       (prismaService.invitation.update as jest.Mock).mockResolvedValue({
         ...mockInvitation,
         token: newToken,
@@ -580,9 +640,9 @@ describe('InvitationsService', () => {
     it('should throw NotFoundException when invitation not found', async () => {
       (prismaService.invitation.findFirst as jest.Mock).mockResolvedValue(null);
 
-      await expect(service.resend('non-existent', mockTenantId)).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(
+        service.resend('non-existent', mockTenantId),
+      ).rejects.toThrow(NotFoundException);
     });
 
     it('should throw BadRequestException for non-pending invitation', async () => {
@@ -596,8 +656,12 @@ describe('InvitationsService', () => {
     });
 
     it('should send new invitation email', async () => {
-      (prismaService.invitation.findFirst as jest.Mock).mockResolvedValue(mockInvitation);
-      (prismaService.invitation.update as jest.Mock).mockResolvedValue(mockInvitation);
+      (prismaService.invitation.findFirst as jest.Mock).mockResolvedValue(
+        mockInvitation,
+      );
+      (prismaService.invitation.update as jest.Mock).mockResolvedValue(
+        mockInvitation,
+      );
 
       await service.resend(mockInvitation.id, mockTenantId);
 
@@ -608,9 +672,15 @@ describe('InvitationsService', () => {
     });
 
     it('should log error when resend email fails', async () => {
-      (prismaService.invitation.findFirst as jest.Mock).mockResolvedValue(mockInvitation);
-      (prismaService.invitation.update as jest.Mock).mockResolvedValue(mockInvitation);
-      (brevoService.sendEmail as jest.Mock).mockRejectedValue(new Error('Email failed'));
+      (prismaService.invitation.findFirst as jest.Mock).mockResolvedValue(
+        mockInvitation,
+      );
+      (prismaService.invitation.update as jest.Mock).mockResolvedValue(
+        mockInvitation,
+      );
+      (brevoService.sendEmail as jest.Mock).mockRejectedValue(
+        new Error('Email failed'),
+      );
 
       const loggerSpy = jest.spyOn(Logger.prototype, 'error');
 
@@ -624,24 +694,33 @@ describe('InvitationsService', () => {
 
     it('should extend expiration by 7 days', async () => {
       const now = new Date();
-      (prismaService.invitation.findFirst as jest.Mock).mockResolvedValue(mockInvitation);
-      (prismaService.invitation.update as jest.Mock).mockResolvedValue(mockInvitation);
+      (prismaService.invitation.findFirst as jest.Mock).mockResolvedValue(
+        mockInvitation,
+      );
+      (prismaService.invitation.update as jest.Mock).mockResolvedValue(
+        mockInvitation,
+      );
 
       await service.resend(mockInvitation.id, mockTenantId);
 
-      const updateCall = (prismaService.invitation.update as jest.Mock).mock.calls[0][0];
+      const updateCall = (prismaService.invitation.update as jest.Mock).mock
+        .calls[0][0];
       const newExpiresAt = new Date(updateCall.data.expiresAt);
       const expectedExpiry = new Date(now);
       expectedExpiry.setDate(expectedExpiry.getDate() + 7);
 
       // Allow 1 second tolerance
-      expect(Math.abs(newExpiresAt.getTime() - expectedExpiry.getTime())).toBeLessThan(1000);
+      expect(
+        Math.abs(newExpiresAt.getTime() - expectedExpiry.getTime()),
+      ).toBeLessThan(1000);
     });
   });
 
   describe('expireOldInvitations', () => {
     it('should mark expired invitations', async () => {
-      (prismaService.invitation.updateMany as jest.Mock).mockResolvedValue({ count: 5 });
+      (prismaService.invitation.updateMany as jest.Mock).mockResolvedValue({
+        count: 5,
+      });
 
       await service.expireOldInvitations();
 
@@ -659,7 +738,9 @@ describe('InvitationsService', () => {
     });
 
     it('should log when invitations are expired', async () => {
-      (prismaService.invitation.updateMany as jest.Mock).mockResolvedValue({ count: 3 });
+      (prismaService.invitation.updateMany as jest.Mock).mockResolvedValue({
+        count: 3,
+      });
       const loggerSpy = jest.spyOn(Logger.prototype, 'log');
 
       await service.expireOldInvitations();
@@ -670,7 +751,9 @@ describe('InvitationsService', () => {
     });
 
     it('should not log when no invitations expired', async () => {
-      (prismaService.invitation.updateMany as jest.Mock).mockResolvedValue({ count: 0 });
+      (prismaService.invitation.updateMany as jest.Mock).mockResolvedValue({
+        count: 0,
+      });
       const loggerSpy = jest.spyOn(Logger.prototype, 'log');
 
       await service.expireOldInvitations();
@@ -685,10 +768,17 @@ describe('InvitationsService', () => {
   describe('email template generation', () => {
     it('should use configured frontend URL in invitation email', async () => {
       (prismaService.user.findUnique as jest.Mock).mockResolvedValue(null);
-      (prismaService.invitation.findUnique as jest.Mock).mockResolvedValue(null);
-      (prismaService.invitation.create as jest.Mock).mockResolvedValue(mockInvitation);
+      (prismaService.invitation.findUnique as jest.Mock).mockResolvedValue(
+        null,
+      );
+      (prismaService.invitation.create as jest.Mock).mockResolvedValue(
+        mockInvitation,
+      );
 
-      await service.create({ email: 'test@example.com' } as any, mockAdminUser as any);
+      await service.create(
+        { email: 'test@example.com' } as any,
+        mockAdminUser as any,
+      );
 
       // Wait for async email sending
       await new Promise((resolve) => setTimeout(resolve, 10));
@@ -703,10 +793,17 @@ describe('InvitationsService', () => {
     it('should use default frontend URL when not configured', async () => {
       (configService.get as jest.Mock).mockReturnValue(undefined);
       (prismaService.user.findUnique as jest.Mock).mockResolvedValue(null);
-      (prismaService.invitation.findUnique as jest.Mock).mockResolvedValue(null);
-      (prismaService.invitation.create as jest.Mock).mockResolvedValue(mockInvitation);
+      (prismaService.invitation.findUnique as jest.Mock).mockResolvedValue(
+        null,
+      );
+      (prismaService.invitation.create as jest.Mock).mockResolvedValue(
+        mockInvitation,
+      );
 
-      await service.create({ email: 'test@example.com' } as any, mockAdminUser as any);
+      await service.create(
+        { email: 'test@example.com' } as any,
+        mockAdminUser as any,
+      );
 
       // Wait for async email sending
       await new Promise((resolve) => setTimeout(resolve, 10));
@@ -720,10 +817,17 @@ describe('InvitationsService', () => {
 
     it('should include tenant name in email', async () => {
       (prismaService.user.findUnique as jest.Mock).mockResolvedValue(null);
-      (prismaService.invitation.findUnique as jest.Mock).mockResolvedValue(null);
-      (prismaService.invitation.create as jest.Mock).mockResolvedValue(mockInvitation);
+      (prismaService.invitation.findUnique as jest.Mock).mockResolvedValue(
+        null,
+      );
+      (prismaService.invitation.create as jest.Mock).mockResolvedValue(
+        mockInvitation,
+      );
 
-      await service.create({ email: 'test@example.com' } as any, mockAdminUser as any);
+      await service.create(
+        { email: 'test@example.com' } as any,
+        mockAdminUser as any,
+      );
 
       // Wait for async email sending
       await new Promise((resolve) => setTimeout(resolve, 10));
@@ -738,10 +842,17 @@ describe('InvitationsService', () => {
 
     it('should include inviter name in email', async () => {
       (prismaService.user.findUnique as jest.Mock).mockResolvedValue(null);
-      (prismaService.invitation.findUnique as jest.Mock).mockResolvedValue(null);
-      (prismaService.invitation.create as jest.Mock).mockResolvedValue(mockInvitation);
+      (prismaService.invitation.findUnique as jest.Mock).mockResolvedValue(
+        null,
+      );
+      (prismaService.invitation.create as jest.Mock).mockResolvedValue(
+        mockInvitation,
+      );
 
-      await service.create({ email: 'test@example.com' } as any, mockAdminUser as any);
+      await service.create(
+        { email: 'test@example.com' } as any,
+        mockAdminUser as any,
+      );
 
       // Wait for async email sending
       await new Promise((resolve) => setTimeout(resolve, 10));
@@ -756,8 +867,12 @@ describe('InvitationsService', () => {
 
     it('should log warning when email sending returns failure', async () => {
       (prismaService.user.findUnique as jest.Mock).mockResolvedValue(null);
-      (prismaService.invitation.findUnique as jest.Mock).mockResolvedValue(null);
-      (prismaService.invitation.create as jest.Mock).mockResolvedValue(mockInvitation);
+      (prismaService.invitation.findUnique as jest.Mock).mockResolvedValue(
+        null,
+      );
+      (prismaService.invitation.create as jest.Mock).mockResolvedValue(
+        mockInvitation,
+      );
       (brevoService.sendEmail as jest.Mock).mockResolvedValue({
         success: false,
         error: 'Invalid email address',
@@ -765,7 +880,10 @@ describe('InvitationsService', () => {
 
       const loggerSpy = jest.spyOn(Logger.prototype, 'warn');
 
-      await service.create({ email: 'test@example.com' } as any, mockAdminUser as any);
+      await service.create(
+        { email: 'test@example.com' } as any,
+        mockAdminUser as any,
+      );
 
       // Wait for async email sending
       await new Promise((resolve) => setTimeout(resolve, 10));
@@ -778,7 +896,9 @@ describe('InvitationsService', () => {
 
   describe('mapToInvitationResponse', () => {
     it('should correctly map invitation entity to response', async () => {
-      (prismaService.invitation.findMany as jest.Mock).mockResolvedValue([mockInvitation]);
+      (prismaService.invitation.findMany as jest.Mock).mockResolvedValue([
+        mockInvitation,
+      ]);
 
       const result = await service.findAllByTenant(mockTenantId);
 
