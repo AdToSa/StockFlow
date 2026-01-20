@@ -83,6 +83,8 @@ export class BrevoService {
   private readonly senderEmail: string;
   private readonly senderName: string;
   private readonly frontendUrl: string;
+  private readonly appUrl: string;
+  private readonly adminEmail: string;
   private readonly maxRetries = 3;
   private readonly baseDelayMs = 1000;
 
@@ -96,6 +98,10 @@ export class BrevoService {
     this.frontendUrl =
       this.configService.get<string>('app.frontendUrl') ||
       'http://localhost:5173';
+    this.appUrl =
+      this.configService.get<string>('app.appUrl') || 'https://stockflow.com';
+    this.adminEmail =
+      this.configService.get<string>('admin.email') || 'admin@stockflow.com';
 
     this.isApiConfigured = !!apiKey;
 
@@ -827,6 +833,149 @@ export class BrevoService {
       subject: `Payment Received - Invoice ${invoiceNumber}`,
       htmlContent,
       textContent: `Payment Received: Thank you for your payment of ${this.formatCurrency(paymentAmount)} for Invoice ${invoiceNumber}. Payment method: ${this.formatPaymentMethod(paymentMethod)}. ${isPaidInFull ? 'Invoice is now paid in full.' : `Remaining balance: ${this.formatCurrency(remainingBalance)}`}`,
+    });
+  }
+
+  /**
+   * Sends a notification email to the admin when a new user registers.
+   * This email alerts the admin that a new registration is pending approval.
+   *
+   * @param data - Registration data including user and tenant information
+   * @returns Send result
+   */
+  async sendAdminNewRegistrationNotification(data: {
+    userEmail: string;
+    userName: string;
+    tenantName: string;
+    registrationDate: Date;
+  }): Promise<SendMailResult> {
+    const { userEmail, userName, tenantName, registrationDate } = data;
+    const adminPanelUrl = `${this.appUrl}/admin/users`;
+
+    const content = `
+      <div style="padding: 12px 16px; background-color: #fef3c7; border-left: 4px solid #f59e0b; border-radius: 4px; margin-bottom: 24px;">
+        <p style="margin: 0; color: #92400e; font-size: 14px; font-weight: 500;">
+          Nuevo registro pendiente de aprobacion
+        </p>
+      </div>
+      <h2 style="margin: 0 0 16px 0; color: #111827; font-size: 20px; font-weight: 600;">
+        Nueva solicitud de registro
+      </h2>
+      <p style="margin: 0 0 16px 0; color: #374151; font-size: 16px; line-height: 1.6;">
+        Se ha recibido una nueva solicitud de registro que requiere tu aprobacion.
+      </p>
+      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #f9fafb; border-radius: 8px; margin-bottom: 24px;">
+        <tr>
+          <td style="padding: 24px;">
+            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+              <tr>
+                <td style="padding: 8px 0;">
+                  <span style="color: #6b7280; font-size: 14px;">Nombre del usuario</span><br>
+                  <span style="color: #111827; font-size: 16px; font-weight: 500;">${userName}</span>
+                </td>
+              </tr>
+              <tr>
+                <td style="padding: 8px 0;">
+                  <span style="color: #6b7280; font-size: 14px;">Email</span><br>
+                  <span style="color: #111827; font-size: 16px; font-weight: 500;">${userEmail}</span>
+                </td>
+              </tr>
+              <tr>
+                <td style="padding: 8px 0;">
+                  <span style="color: #6b7280; font-size: 14px;">Nombre de la empresa</span><br>
+                  <span style="color: #111827; font-size: 16px; font-weight: 500;">${tenantName}</span>
+                </td>
+              </tr>
+              <tr>
+                <td style="padding: 8px 0;">
+                  <span style="color: #6b7280; font-size: 14px;">Fecha de registro</span><br>
+                  <span style="color: #111827; font-size: 16px; font-weight: 500;">${this.formatDate(registrationDate)}</span>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+      <table role="presentation" cellspacing="0" cellpadding="0" border="0">
+        <tr>
+          <td style="border-radius: 6px; background-color: #2563eb;">
+            <a href="${adminPanelUrl}" style="display: inline-block; padding: 14px 28px; color: #ffffff; text-decoration: none; font-size: 16px; font-weight: 500;">
+              Ir al panel de administracion
+            </a>
+          </td>
+        </tr>
+      </table>
+      <p style="margin: 24px 0 0 0; color: #6b7280; font-size: 14px;">
+        Puedes aprobar o rechazar esta solicitud desde el panel de administracion.
+      </p>`;
+
+    const htmlContent = this.getEmailTemplate(
+      content,
+      'Nuevo registro pendiente',
+    );
+
+    return this.sendEmail({
+      to: this.adminEmail,
+      subject: '[StockFlow] Nuevo registro pendiente de aprobacion',
+      htmlContent,
+      textContent: `Nuevo registro pendiente de aprobacion. Usuario: ${userName} (${userEmail}). Empresa: ${tenantName}. Fecha: ${this.formatDate(registrationDate)}. Accede al panel de administracion para aprobar o rechazar: ${adminPanelUrl}`,
+    });
+  }
+
+  /**
+   * Sends a registration confirmation email to the user.
+   * This email confirms that their registration was received and is pending approval.
+   *
+   * @param data - User data including email, name, and tenant name
+   * @returns Send result
+   */
+  async sendUserRegistrationConfirmation(data: {
+    to: string;
+    firstName: string;
+    tenantName: string;
+  }): Promise<SendMailResult> {
+    const { to, firstName, tenantName } = data;
+
+    const content = `
+      <h2 style="margin: 0 0 16px 0; color: #111827; font-size: 20px; font-weight: 600;">
+        Bienvenido a StockFlow, ${firstName}!
+      </h2>
+      <p style="margin: 0 0 16px 0; color: #374151; font-size: 16px; line-height: 1.6;">
+        Hemos recibido tu solicitud de registro para <strong>${tenantName}</strong> en StockFlow.
+      </p>
+      <div style="padding: 16px; background-color: #f0fdf4; border-left: 4px solid #22c55e; border-radius: 4px; margin-bottom: 24px;">
+        <p style="margin: 0 0 8px 0; color: #166534; font-size: 14px; font-weight: 500;">
+          Estado: Pendiente de aprobacion
+        </p>
+        <p style="margin: 0; color: #166534; font-size: 14px;">
+          Tu cuenta esta siendo revisada por nuestro equipo de administracion.
+        </p>
+      </div>
+      <h3 style="margin: 0 0 12px 0; color: #111827; font-size: 16px; font-weight: 600;">
+        Que sucede ahora?
+      </h3>
+      <ul style="margin: 0 0 24px 0; padding-left: 20px; color: #374151; font-size: 16px; line-height: 1.8;">
+        <li>Nuestro equipo revisara tu solicitud de registro.</li>
+        <li>Recibiras un correo electronico cuando tu cuenta sea aprobada.</li>
+        <li>Una vez aprobada, podras iniciar sesion y comenzar a usar StockFlow.</li>
+      </ul>
+      <p style="margin: 0 0 16px 0; color: #374151; font-size: 16px; line-height: 1.6;">
+        El proceso de aprobacion normalmente toma entre 24-48 horas habiles.
+      </p>
+      <p style="margin: 0; color: #6b7280; font-size: 14px;">
+        Si tienes alguna pregunta, no dudes en contactarnos en <a href="mailto:support@stockflow.com" style="color: #2563eb;">support@stockflow.com</a>
+      </p>`;
+
+    const htmlContent = this.getEmailTemplate(
+      content,
+      'Registro recibido - StockFlow',
+    );
+
+    return this.sendEmail({
+      to,
+      subject: 'Bienvenido a StockFlow - Registro recibido',
+      htmlContent,
+      textContent: `Bienvenido a StockFlow, ${firstName}! Hemos recibido tu solicitud de registro para ${tenantName}. Tu cuenta esta pendiente de aprobacion. El proceso normalmente toma entre 24-48 horas habiles. Te notificaremos por correo electronico cuando tu cuenta sea aprobada.`,
     });
   }
 }

@@ -962,6 +962,77 @@ describe('BrevoService', () => {
         expect(result.success).toBe(true);
       });
     });
+
+    describe('sendAdminNewRegistrationNotification', () => {
+      it('should send admin registration notification successfully', async () => {
+        const result =
+          await brevoServiceConfigured.sendAdminNewRegistrationNotification({
+            userEmail: 'newuser@example.com',
+            userName: 'John Doe',
+            tenantName: 'Acme Corp',
+            registrationDate: new Date('2024-01-15'),
+          });
+
+        expect(result.success).toBe(true);
+        expect(mockApiInstance.sendTransacEmail).toHaveBeenCalled();
+      });
+
+      it('should include all registration details in email', async () => {
+        await brevoServiceConfigured.sendAdminNewRegistrationNotification({
+          userEmail: 'newuser@example.com',
+          userName: 'John Doe',
+          tenantName: 'Acme Corp',
+          registrationDate: new Date('2024-01-15'),
+        });
+
+        expect(mockApiInstance.sendTransacEmail).toHaveBeenCalled();
+      });
+
+      it('should have correct Spanish subject line', async () => {
+        await brevoServiceConfigured.sendAdminNewRegistrationNotification({
+          userEmail: 'newuser@example.com',
+          userName: 'John Doe',
+          tenantName: 'Acme Corp',
+          registrationDate: new Date('2024-01-15'),
+        });
+
+        expect(mockApiInstance.sendTransacEmail).toHaveBeenCalled();
+      });
+    });
+
+    describe('sendUserRegistrationConfirmation', () => {
+      it('should send user registration confirmation successfully', async () => {
+        const result =
+          await brevoServiceConfigured.sendUserRegistrationConfirmation({
+            to: 'newuser@example.com',
+            firstName: 'John',
+            tenantName: 'Acme Corp',
+          });
+
+        expect(result.success).toBe(true);
+        expect(mockApiInstance.sendTransacEmail).toHaveBeenCalled();
+      });
+
+      it('should include user name and tenant in content', async () => {
+        await brevoServiceConfigured.sendUserRegistrationConfirmation({
+          to: 'newuser@example.com',
+          firstName: 'John',
+          tenantName: 'Acme Corp',
+        });
+
+        expect(mockApiInstance.sendTransacEmail).toHaveBeenCalled();
+      });
+
+      it('should have correct Spanish subject line', async () => {
+        await brevoServiceConfigured.sendUserRegistrationConfirmation({
+          to: 'newuser@example.com',
+          firstName: 'John',
+          tenantName: 'Acme Corp',
+        });
+
+        expect(mockApiInstance.sendTransacEmail).toHaveBeenCalled();
+      });
+    });
   });
 
   describe('HTML template generation', () => {

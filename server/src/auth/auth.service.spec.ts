@@ -11,6 +11,8 @@ import {
 import * as bcrypt from 'bcrypt';
 import { AuthService } from './auth.service';
 import { PrismaService } from '../prisma';
+
+import { BrevoService } from '../notifications/mail/brevo.service';
 import {
   UserRole,
   UserStatus,
@@ -27,6 +29,7 @@ describe('AuthService', () => {
   let prismaService: jest.Mocked<PrismaService>;
   let jwtService: jest.Mocked<JwtService>;
   let configService: jest.Mocked<ConfigService>;
+  let brevoService: jest.Mocked<BrevoService>;
 
   // Test data
   const mockTenant = {
@@ -129,12 +132,22 @@ describe('AuthService', () => {
       }),
     };
 
+    const mockBrevoService = {
+      sendAdminNewRegistrationNotification: jest
+        .fn()
+        .mockResolvedValue({ success: true }),
+      sendUserRegistrationConfirmation: jest
+        .fn()
+        .mockResolvedValue({ success: true }),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AuthService,
         { provide: PrismaService, useValue: mockPrismaService },
         { provide: JwtService, useValue: mockJwtService },
         { provide: ConfigService, useValue: mockConfigService },
+        { provide: BrevoService, useValue: mockBrevoService },
       ],
     }).compile();
 
@@ -142,6 +155,7 @@ describe('AuthService', () => {
     prismaService = module.get(PrismaService);
     jwtService = module.get(JwtService);
     configService = module.get(ConfigService);
+    brevoService = module.get(BrevoService);
 
     // Suppress logger output during tests
     jest.spyOn(Logger.prototype, 'debug').mockImplementation();

@@ -81,6 +81,7 @@ export default function RegisterPage() {
     handleSubmit,
     trigger,
     watch,
+    setError,
     formState: { errors },
   } = useForm<RegisterForm>({
     resolver: zodResolver(registerSchema),
@@ -125,7 +126,22 @@ export default function RegisterPage() {
       ['tenantName', 'acceptTerms'],
     ];
 
+    // Validate current step fields
     const isValid = await trigger(fieldsToValidate[currentStep - 1]);
+
+    // For step 2, also validate password matching (cross-field validation)
+    if (currentStep === 2 && isValid) {
+      const passwordValue = watch('password');
+      const confirmValue = watch('confirmPassword');
+      if (passwordValue !== confirmValue) {
+        setError('confirmPassword', {
+          type: 'manual',
+          message: 'Las contrasenas no coinciden',
+        });
+        return; // Don't proceed
+      }
+    }
+
     if (isValid && currentStep < 3) {
       setCurrentStep((prev) => prev + 1);
     }
@@ -140,6 +156,27 @@ export default function RegisterPage() {
   const onSubmit = (data: RegisterForm) => {
     const { confirmPassword: _, acceptTerms: __, ...userData } = data;
     registerUser(userData);
+  };
+
+  // Handle validation errors - navigate to the step with errors
+  const onError = (errors: Record<string, unknown>) => {
+    const step1Fields = ['firstName', 'lastName', 'email'];
+    const step2Fields = ['password', 'confirmPassword'];
+
+    // Check which step has errors
+    for (const field of step1Fields) {
+      if (field in errors) {
+        setCurrentStep(1);
+        return;
+      }
+    }
+    for (const field of step2Fields) {
+      if (field in errors) {
+        setCurrentStep(2);
+        return;
+      }
+    }
+    // Step 3 errors will be shown on current page
   };
 
   return (
@@ -225,7 +262,7 @@ export default function RegisterPage() {
           </div>
 
           {/* Form */}
-          <form onSubmit={handleSubmit(onSubmit)}>
+          <form onSubmit={handleSubmit(onSubmit, onError)}>
             <AnimatePresence mode="wait">
               {/* Step 1: Personal Info */}
               {currentStep === 1 && (

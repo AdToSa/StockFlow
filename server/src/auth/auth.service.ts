@@ -19,6 +19,7 @@ import {
   TenantStatus,
   Tenant,
 } from '@prisma/client';
+import { BrevoService } from '../notifications/mail/brevo.service';
 
 // Re-export JwtPayload for backwards compatibility
 export type { JwtPayload } from './types';
@@ -92,6 +93,7 @@ export class AuthService {
     private readonly prisma: PrismaService,
     private readonly configService: ConfigService,
     private readonly jwtService: JwtService,
+    private readonly brevoService: BrevoService,
   ) {}
 
   /**
@@ -310,6 +312,15 @@ export class AuthService {
       `User registered (pending approval): ${result.user.email}, tenant: ${result.tenant.name}`,
     );
 
+    // Send notification emails asynchronously - don't block registration on email delivery
+    this.sendRegistrationEmails(result.user, result.tenant).catch((error) => {
+      // This catch is a safety net - errors should already be handled inside sendRegistrationEmails
+      this.logger.error(
+        'Unexpected error in sendRegistrationEmails',
+        error instanceof Error ? error.stack : undefined,
+      );
+    });
+
     return {
       message:
         'Registration successful. Your account is pending approval by an administrator. You will receive an email once your account is activated.',
@@ -322,6 +333,61 @@ export class AuthService {
         name: result.tenant.name,
       },
     };
+  }
+
+  /**
+   * Sends registration notification emails to admin and user
+   * Uses Promise.allSettled to ensure both emails are attempted independently
+   * Logs errors but does not throw - registration should succeed even if emails fail
+   *
+   * @param user - The newly registered user
+   * @param tenant - The newly created tenant
+   */
+  private async sendRegistrationEmails(
+    user: { email: string; firstName: string; lastName: string },
+    tenant: { name: string },
+  ): Promise<void> {
+    const userName = `${user.firstName} ${user.lastName}`;
+    const registrationDate = new Date();
+
+    const emailPromises = [
+      // Admin notification email
+      this.brevoService.sendAdminNewRegistrationNotification({
+        userEmail: user.email,
+        userName,
+        tenantName: tenant.name,
+        registrationDate,
+      }),
+      // User confirmation email
+      this.brevoService.sendUserRegistrationConfirmation({
+        to: user.email,
+        firstName: user.firstName,
+        tenantName: tenant.name,
+      }),
+    ];
+
+    const results = await Promise.allSettled(emailPromises);
+
+    // Log results for monitoring
+    results.forEach((result, index) => {
+      const emailType = index === 0 ? 'admin notification' : 'user confirmation';
+      if (result.status === 'fulfilled') {
+        if (result.value.success) {
+          this.logger.log(
+            `Registration ${emailType} email sent successfully for user: ${user.email}`,
+          );
+        } else {
+          this.logger.warn(
+            `Registration ${emailType} email failed for user: ${user.email} - ${result.value.error}`,
+          );
+        }
+      } else {
+        this.logger.error(
+          `Registration ${emailType} email threw error for user: ${user.email}`,
+          result.reason instanceof Error ? result.reason.stack : undefined,
+        );
+      }
+    });
   }
 
   /**

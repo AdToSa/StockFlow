@@ -7,6 +7,14 @@ export interface AppConfig {
   nodeEnv: string;
   port: number;
   frontendUrl: string;
+  appUrl: string;
+}
+
+/**
+ * Admin configuration interface
+ */
+export interface AdminConfig {
+  email: string;
 }
 
 /**
@@ -82,6 +90,7 @@ export interface RedisConfig {
  */
 export interface Configuration {
   app: AppConfig;
+  admin: AdminConfig;
   database: DatabaseConfig;
   jwt: JwtConfig;
   mail: MailConfig;
@@ -100,6 +109,17 @@ export const appConfig = registerAs(
     nodeEnv: process.env.NODE_ENV || 'development',
     port: parseInt(process.env.PORT || '3000', 10),
     frontendUrl: process.env.FRONTEND_URL || 'http://localhost:5173',
+    appUrl: process.env.APP_URL || 'https://stockflow.com',
+  }),
+);
+
+/**
+ * Admin configuration factory
+ */
+export const adminConfig = registerAs(
+  'admin',
+  (): AdminConfig => ({
+    email: process.env.ADMIN_EMAIL || 'admin@stockflow.com',
   }),
 );
 
@@ -204,6 +224,10 @@ export default (): Configuration => ({
     nodeEnv: process.env.NODE_ENV || 'development',
     port: parseInt(process.env.PORT || '3000', 10),
     frontendUrl: process.env.FRONTEND_URL || 'http://localhost:5173',
+    appUrl: process.env.APP_URL || 'https://stockflow.com',
+  },
+  admin: {
+    email: process.env.ADMIN_EMAIL || 'admin@stockflow.com',
   },
   database: {
     url: process.env.DATABASE_URL || '',

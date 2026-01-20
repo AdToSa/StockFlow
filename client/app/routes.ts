@@ -8,6 +8,15 @@ export default [
   route("login", "routes/login.tsx"),
   route("register", "routes/register.tsx"),
 
+  // System Admin routes (separate from tenant app)
+  route("system-admin/login", "routes/system-admin.login.tsx"),
+  layout("routes/system-admin.tsx", [
+    route("system-admin", "routes/system-admin._index.tsx", { index: true }),
+    route("system-admin/dashboard", "routes/system-admin.dashboard.tsx"),
+    route("system-admin/users", "routes/system-admin.users.tsx"),
+    route("system-admin/tenants", "routes/system-admin.tenants.tsx"),
+  ]),
+
   // Protected app routes with layout
   layout("routes/_app.tsx", [
     route("dashboard", "routes/_app.dashboard.tsx"),

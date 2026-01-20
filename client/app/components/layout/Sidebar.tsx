@@ -100,74 +100,76 @@ function SidebarContent({
         'dark:bg-neutral-900 dark:border-neutral-800'
       )}
     >
-      {/* Header with proper top spacing for logo alignment */}
-      <div className="flex h-16 items-center justify-between px-4 pt-5 pb-4 border-b border-neutral-100 dark:border-neutral-800">
-        <motion.div
-          variants={itemVariants}
-          animate={isCollapsed ? 'collapsed' : 'expanded'}
-          className="flex items-center gap-3"
-        >
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary-600 text-white flex-shrink-0">
-            <svg className="h-6 w-6" viewBox="0 0 24 24" fill="currentColor">
+      {/* Header - Clean, balanced design with proper breathing room */}
+      <div className="px-4 pt-6 pb-5 border-b border-neutral-100 dark:border-neutral-800">
+        {/* Top row: Logo/Icon + Controls */}
+        <div className="flex items-start justify-between mb-4">
+          {/* Logo Icon - Larger, more prominent */}
+          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-primary-500 to-primary-600 text-white shadow-lg shadow-primary-500/25 flex-shrink-0">
+            <svg className="h-7 w-7" viewBox="0 0 24 24" fill="currentColor">
               <path d="M20 7h-4V4c0-1.1-.9-2-2-2h-4c-1.1 0-2 .9-2 2v3H4c-1.1 0-2 .9-2 2v11c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V9c0-1.1-.9-2-2-2zM10 4h4v3h-4V4zm10 16H4V9h16v11z" />
               <path d="M13 12h-2v3H8v2h3v3h2v-3h3v-2h-3z" />
             </svg>
           </div>
-          <span className="text-lg font-bold font-display text-neutral-900 dark:text-white whitespace-nowrap">
+
+          {/* Control buttons */}
+          <div className="flex items-center gap-1">
+            {/* Close button for mobile */}
+            {showCloseButton && onClose && (
+              <button
+                onClick={onClose}
+                className={cn(
+                  'flex h-8 w-8 items-center justify-center rounded-lg',
+                  'text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100',
+                  'dark:hover:text-neutral-300 dark:hover:bg-neutral-800',
+                  'transition-colors'
+                )}
+                aria-label="Cerrar menu"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            )}
+
+            {/* Collapse toggle for desktop */}
+            {showCollapseButton && onToggleCollapse && (
+              <button
+                onClick={onToggleCollapse}
+                className={cn(
+                  'flex h-8 w-8 items-center justify-center rounded-lg',
+                  'text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100',
+                  'dark:hover:text-neutral-300 dark:hover:bg-neutral-800',
+                  'transition-colors'
+                )}
+                title={isCollapsed ? 'Expandir' : 'Colapsar'}
+              >
+                {isCollapsed ? (
+                  <ChevronRight className="h-5 w-5" />
+                ) : (
+                  <ChevronLeft className="h-5 w-5" />
+                )}
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Brand + Tenant info - Clean hierarchy */}
+        <motion.div
+          variants={itemVariants}
+          animate={isCollapsed ? 'collapsed' : 'expanded'}
+        >
+          <h1 className="text-xl font-bold font-display text-neutral-900 dark:text-white">
             StockFlow
-          </span>
+          </h1>
+          <div className="mt-2 flex items-center gap-2">
+            <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold uppercase tracking-wider bg-neutral-100 text-neutral-500 dark:bg-neutral-800 dark:text-neutral-400">
+              Empresa
+            </span>
+            <span className="text-sm font-medium text-neutral-600 dark:text-neutral-300 truncate">
+              {tenantName}
+            </span>
+          </div>
         </motion.div>
-
-        {/* Close button for mobile */}
-        {showCloseButton && onClose && (
-          <button
-            onClick={onClose}
-            className={cn(
-              'flex h-8 w-8 items-center justify-center rounded-lg',
-              'text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100',
-              'dark:hover:text-neutral-300 dark:hover:bg-neutral-800',
-              'transition-colors'
-            )}
-            aria-label="Cerrar menu"
-          >
-            <X className="h-5 w-5" />
-          </button>
-        )}
-
-        {/* Collapse toggle for desktop */}
-        {showCollapseButton && onToggleCollapse && (
-          <button
-            onClick={onToggleCollapse}
-            className={cn(
-              'flex h-8 w-8 items-center justify-center rounded-lg',
-              'text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100',
-              'dark:hover:text-neutral-300 dark:hover:bg-neutral-800',
-              'transition-colors'
-            )}
-            title={isCollapsed ? 'Expandir' : 'Colapsar'}
-          >
-            {isCollapsed ? (
-              <ChevronRight className="h-5 w-5" />
-            ) : (
-              <ChevronLeft className="h-5 w-5" />
-            )}
-          </button>
-        )}
       </div>
-
-      {/* Tenant info */}
-      <motion.div
-        variants={itemVariants}
-        animate={isCollapsed ? 'collapsed' : 'expanded'}
-        className="px-4 py-3 border-b border-neutral-100 dark:border-neutral-800"
-      >
-        <p className="text-xs font-medium text-neutral-400 uppercase tracking-wider">
-          Empresa
-        </p>
-        <p className="text-sm font-semibold text-neutral-900 dark:text-white truncate">
-          {tenantName}
-        </p>
-      </motion.div>
 
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto py-4 px-3">
