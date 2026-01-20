@@ -1,8 +1,12 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PassportStrategy } from '@nestjs/passport';
-import { Strategy, type VerifyCallback, type Profile } from 'passport-google-oauth20';
-import type { OAuthUserDto } from '../dto/oauth-user.dto';
+import {
+  Strategy,
+  type VerifyCallback,
+  type Profile,
+} from 'passport-google-oauth20';
+import type { OAuthUserDto } from '../dto';
 
 /**
  * Google OAuth 2.0 Strategy for Passport.js
@@ -54,8 +58,8 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
   /**
    * Validates the Google OAuth response and extracts user profile information.
    *
-   * @param accessToken - Google OAuth access token
-   * @param refreshToken - Google OAuth refresh token (may be undefined)
+   * @param _accessToken - Google OAuth access token (unused)
+   * @param _refreshToken - Google OAuth refresh token (unused)
    * @param profile - Google user profile containing id, emails, name, photos
    * @param done - Passport callback function
    */

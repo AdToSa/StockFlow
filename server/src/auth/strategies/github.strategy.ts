@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PassportStrategy } from '@nestjs/passport';
 import { Strategy, type Profile } from 'passport-github2';
-import type { OAuthUserDto } from '../dto/oauth-user.dto';
+import type { OAuthUserDto } from '../dto';
 
 /**
  * GitHub OAuth Strategy for Passport.js
@@ -57,8 +57,8 @@ export class GitHubStrategy extends PassportStrategy(Strategy, 'github') {
   /**
    * Validates the GitHub OAuth response and extracts user profile information.
    *
-   * @param accessToken - GitHub OAuth access token
-   * @param refreshToken - GitHub OAuth refresh token (typically undefined for GitHub)
+   * @param _accessToken - GitHub OAuth access token (unused)
+   * @param _refreshToken - GitHub OAuth refresh token (unused)
    * @param profile - GitHub user profile containing id, username, displayName, emails, photos
    * @param done - Passport callback function
    */
@@ -84,7 +84,9 @@ export class GitHubStrategy extends PassportStrategy(Strategy, 'github') {
           (e) => (e as { verified?: boolean }).verified === true,
         );
         email =
-          primaryEmail?.value || verifiedEmail?.value || profile.emails[0].value;
+          primaryEmail?.value ||
+          verifiedEmail?.value ||
+          profile.emails[0].value;
       }
 
       if (!email) {
