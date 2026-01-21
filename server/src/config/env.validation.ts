@@ -47,6 +47,14 @@ export class EnvironmentVariables {
   JWT_REFRESH_SECRET: string;
 
   @IsString()
+  @IsNotEmpty({ message: 'SYSTEM_ADMIN_JWT_SECRET is required' })
+  SYSTEM_ADMIN_JWT_SECRET: string;
+
+  @IsString()
+  @IsNotEmpty({ message: 'SYSTEM_ADMIN_JWT_REFRESH_SECRET is required' })
+  SYSTEM_ADMIN_JWT_REFRESH_SECRET: string;
+
+  @IsString()
   @IsOptional()
   JWT_EXPIRATION: string = '15m';
 
