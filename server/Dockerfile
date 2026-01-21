@@ -103,9 +103,8 @@ EXPOSE 3000
 # Switch to non-root user
 USER nestjs
 
-# Health check - uses PORT env var (Railway sets this dynamically)
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-  CMD wget --no-verbose --tries=1 --spider http://localhost:${PORT:-3000}/health/live || exit 1
+# Note: Health check is handled by Railway's built-in health monitoring
+# Do not add HEALTHCHECK here as Railway dynamically assigns the PORT
 
 # Start the application
 CMD ["node", "dist/main.js"]
